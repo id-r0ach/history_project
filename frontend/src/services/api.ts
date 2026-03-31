@@ -1,4 +1,10 @@
-import type { CharacterInfo, ChatRequest, ChatResponse, ApiError } from "../types";
+import type {
+  CharacterInfo,
+  ChatRequest,
+  ChatResponse,
+  HistoryResponse,
+  ApiError,
+} from "../types";
 
 const BASE_URL = "/api";
 
@@ -31,6 +37,16 @@ class ApiClient {
     return this.request<ChatResponse>("/chat", {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  }
+
+  async getHistory(sessionId: string): Promise<HistoryResponse> {
+    return this.request<HistoryResponse>(`/history/${sessionId}`);
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    await this.request<unknown>(`/sessions/${sessionId}`, {
+      method: "DELETE",
     });
   }
 }

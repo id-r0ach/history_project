@@ -7,11 +7,13 @@ export interface CharacterInfo {
 
 export interface ChatRequest {
   character_id: string;
+  session_id: string;
   message: string;
 }
 
 export interface ChatResponse {
   character_id: string;
+  session_id: string;
   reply: string;
   model: string;
 }
@@ -27,4 +29,15 @@ export interface Message {
   role: MessageRole;
   content: string;
   timestamp: Date;
+}
+
+// Сообщение из БД (без поля id и timestamp — их нет на бэкенде)
+export interface HistoryMessage {
+  role: MessageRole;
+  content: string;
+}
+
+export interface HistoryResponse {
+  session_id: string;
+  messages: HistoryMessage[];
 }

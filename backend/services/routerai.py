@@ -2,7 +2,7 @@ import httpx
 from typing import Any
 
 from config import settings
-from characters import Character
+from services.session import Message
 
 
 class RouterAIError(Exception):
@@ -28,9 +28,14 @@ class RouterAIService:
             "Content-Type": "application/json",
         }
 
-    async def ask(self, character: Character, user_message: str) -> str:
+    async def ask(self, messages: list[Message]) -> str:
         """
-        Send a message to the RouterAI API and return the assistant reply text.
+        Send the full conversation history to the RouterAI API and return
+        the assistant reply text.
+
+        Args:
+            messages: Full message list including system prompt, all prior
+                      turns, and the latest user message.
 
         Raises:
             RouterAIError: on non-2xx responses or unexpected payload shape.
@@ -38,10 +43,7 @@ class RouterAIService:
         """
         payload: dict[str, Any] = {
             "model": self._model,
-            "messages": [
-                {"role": "system", "content": character.system_prompt},
-                {"role": "user", "content": user_message},
-            ],
+            "messages": messages,  # type: ignore[arg-type]
             "temperature": 0.8,
             "max_tokens": 1024,
         }
