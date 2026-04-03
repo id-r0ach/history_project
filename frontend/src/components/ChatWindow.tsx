@@ -25,7 +25,18 @@ function getOrCreateSessionId(characterId: string): string {
   const key = storageKey(characterId);
   const existing = localStorage.getItem(key);
   if (existing) return existing;
-  const newId = crypto.randomUUID();
+
+  // crypto.randomUUID() работает только на HTTPS
+  // Фолбэк для HTTP (IP без сертификата)
+  const newId =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === "x" ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+
   localStorage.setItem(key, newId);
   return newId;
 }
