@@ -19,6 +19,7 @@ class CharacterInfo(BaseModel):
     name: str
     years: str
     description: str
+    era: str
 
 
 class SessionInfo(BaseModel):

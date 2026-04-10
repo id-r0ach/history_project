@@ -71,7 +71,7 @@ app.add_middleware(
 async def list_characters() -> list[CharacterInfo]:
     """Возвращает список доступных исторических персонажей."""
     return [
-        CharacterInfo(id=c.id, name=c.name, years=c.years, description=c.description)
+        CharacterInfo(id=c.id, name=c.name, years=c.years, description=c.description, era=c.era)
         for c in CHARACTERS.values()
     ]
 

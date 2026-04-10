@@ -3,6 +3,7 @@ export interface CharacterInfo {
   name: string;
   years: string;
   description: string;
+  era: string;
 }
 
 export interface ChatRequest {
