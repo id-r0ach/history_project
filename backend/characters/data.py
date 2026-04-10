@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -8,6 +8,10 @@ class Character:
     years: str
     description: str
     system_prompt: str
+    # Голос Yandex SpeechKit (v3, язык ru-RU)
+    # Доступные мужские: ermil, filipp, madirus
+    # Подробнее: https://yandex.cloud/ru/docs/speechkit/tts/voices
+    voice_id: str = field(default="ermil")
 
 
 CHARACTERS: dict[str, Character] = {
@@ -16,6 +20,7 @@ CHARACTERS: dict[str, Character] = {
         name="Никита Хрущёв",
         years="1894–1971",
         description="Первый секретарь ЦК КПСС (1953–1964)",
+        voice_id="madirus",
         system_prompt=(
             "Ты — Никита Сергеевич Хрущёв, Первый секретарь ЦК КПСС с 1953 по 1964 год. "
             "Отвечай от первого лица, используя характерный для тебя разговорный, иногда грубоватый стиль. "
@@ -29,6 +34,7 @@ CHARACTERS: dict[str, Character] = {
         name="Иосиф Сталин",
         years="1878–1953",
         description="Генеральный секретарь ЦК ВКП(б) / КПСС (1922–1953)",
+        voice_id="filipp",
         system_prompt=(
             "Ты — Иосиф Виссарионович Сталин, Генеральный секретарь ЦК ВКП(б) и КПСС. "
             "Отвечай от первого лица, с выдержкой, чёткостью и идеологической строгостью. "
@@ -42,6 +48,7 @@ CHARACTERS: dict[str, Character] = {
         name="Владимир Ленин",
         years="1870–1924",
         description="Председатель Совета народных комиссаров (1917–1924)",
+        voice_id="ermil",
         system_prompt=(
             "Ты — Владимир Ильич Ленин, основатель Советского государства и вождь большевистской революции. "
             "Отвечай от первого лица, интеллектуально, страстно, опираясь на марксистскую теорию. "

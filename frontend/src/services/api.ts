@@ -49,6 +49,23 @@ class ApiClient {
       method: "DELETE",
     });
   }
+
+  async synthesizeSpeech(characterId: string, text: string): Promise<Blob> {
+    const response = await fetch(`${BASE_URL}/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ character_id: characterId, text }),
+    });
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try {
+        const err = await response.json() as { detail?: string };
+        detail = err.detail ?? detail;
+      } catch { /* ignore */ }
+      throw new Error(detail);
+    }
+    return response.blob();
+  }
 }
 
 export const apiClient = new ApiClient();

@@ -5,11 +5,18 @@ from typing import AsyncIterator
 import httpx
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from characters import CHARACTERS, get_character
 from config import settings
 from schemas import CharacterInfo, ChatRequest, ChatResponse, SessionInfo, HistoryMessage, HistoryResponse
-from services import RouterAIError, routerai_service, session_store
+from services import RouterAIError, routerai_service, session_store, TTSError, YandexTTSService
+
+# Инициализируем TTS-сервис (ключи из .env, пустые строки — сервис отключён)
+tts_service = YandexTTSService(
+    api_key=settings.yandex_api_key,
+    folder_id=settings.yandex_folder_id,
+)
 from services.session import init_db
 
 # ---------------------------------------------------------------------------
@@ -158,6 +165,41 @@ async def delete_session(session_id: str) -> SessionInfo:
     session_store.delete(session_id)
     logger.info("Session deleted | session=%s | had %d messages", session_id, history_len)
     return SessionInfo(session_id=session_id, message_count=0)
+
+
+# ---------------------------------------------------------------------------
+# Routes — TTS (Yandex SpeechKit)
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel as _BaseModel
+
+class TTSRequest(_BaseModel):
+    character_id: str
+    text: str
+
+
+@app.post(
+    "/api/tts",
+    tags=["tts"],
+    responses={
+        200: {"content": {"audio/ogg": {}}, "description": "Аудио OGG/Opus"},
+        503: {"description": "TTS не настроен или недоступен"},
+    },
+)
+async def synthesize_speech(body: TTSRequest) -> Response:
+    """
+    Синтезирует речь через Yandex SpeechKit.
+    Возвращает аудио в формате OGG/Opus (поддерживается всеми современными браузерами).
+    Голос выбирается автоматически по `character_id`.
+    """
+    character = get_character(body.character_id)
+    voice_id = character.voice_id if character else "ermil"
+
+    try:
+        audio_bytes = await tts_service.synthesize(body.text, voice_id=voice_id)
+    except TTSError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    return Response(content=audio_bytes, media_type="audio/ogg")
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://user:password@localhost:5432/soviet_chat"
     allowed_origins: str = "http://localhost:5173"
 
+    # Yandex SpeechKit
+    yandex_api_key: str = ""          # IAM-токен или API-ключ сервисного аккаунта
+    yandex_folder_id: str = ""        # folder_id облачного каталога
+
     @property
     def origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",")]
