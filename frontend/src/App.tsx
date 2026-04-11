@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import type { CharacterInfo } from "./types";
+import { useEffect, useState, useCallback } from "react";
+import type { CharacterInfo, BalanceInfo } from "./types";
 import { apiClient } from "./services/api";
 import { CharacterSidebar } from "./components/CharacterSidebar";
 import { ChatWindow } from "./components/ChatWindow";
@@ -33,6 +33,14 @@ export default function App() {
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(true);
+  const [balance, setBalance] = useState<BalanceInfo | null>(null);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
+
+  const refreshBalance = useCallback(() => {
+    apiClient.getBalance()
+      .then(setBalance)
+      .catch(() => { /* тихо игнорируем — не критично */ });
+  }, []);
 
   useEffect(() => {
     apiClient
@@ -42,15 +50,21 @@ export default function App() {
         if (data.length > 0) setSelectedId(data[0].id);
       })
       .catch(() => {
-        // Use fallback if backend is unavailable at startup
         setCharacters(FALLBACK_CHARACTERS);
         setSelectedId(FALLBACK_CHARACTERS[0].id);
       })
       .finally(() => setIsFetching(false));
   }, []);
 
-  const selectedCharacter =
-    characters.find((c) => c.id === selectedId) ?? null;
+  // Загружаем баланс при старте
+  useEffect(() => {
+    setIsBalanceLoading(true);
+    apiClient.getBalance()
+      .then(setBalance)
+      .finally(() => setIsBalanceLoading(false));
+  }, []);
+
+  const selectedCharacter = characters.find((c) => c.id === selectedId) ?? null;
 
   return (
     <div className="flex h-screen w-screen bg-soviet-dark overflow-hidden font-body">
@@ -59,6 +73,8 @@ export default function App() {
         selectedId={selectedId}
         onSelect={setSelectedId}
         isLoading={isFetching}
+        balance={balance}
+        isBalanceLoading={isBalanceLoading}
       />
       <main className="flex-1 min-w-0 h-full">
         {selectedId ? (
@@ -66,6 +82,7 @@ export default function App() {
             key={selectedId}
             characterId={selectedId}
             character={selectedCharacter}
+            onMessageSent={refreshBalance}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-soviet-gray-light font-body text-sm">

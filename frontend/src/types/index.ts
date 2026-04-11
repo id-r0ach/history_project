@@ -23,6 +23,14 @@ export interface ApiError {
   detail: string;
 }
 
+export interface BalanceInfo {
+  current: number;
+  initial: number;
+  spent: number;
+  requests: number;
+  percent: number;
+}
+
 export type MessageRole = "user" | "assistant";
 
 export interface Message {

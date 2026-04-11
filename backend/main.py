@@ -10,12 +10,18 @@ from fastapi.responses import Response
 from characters import CHARACTERS, get_character
 from config import settings
 from schemas import CharacterInfo, ChatRequest, ChatResponse, SessionInfo, HistoryMessage, HistoryResponse
-from services import RouterAIError, routerai_service, session_store, TTSError, YandexTTSService
+from services import RouterAIError, routerai_service, session_store, TTSError, YandexTTSService, BalanceTracker
 
-# Инициализируем TTS-сервис (ключи из .env, пустые строки — сервис отключён)
+# Инициализируем TTS-сервис
 tts_service = YandexTTSService(
     api_key=settings.yandex_api_key,
     folder_id=settings.yandex_folder_id,
+)
+
+# Инициализируем трекер баланса
+balance_tracker = BalanceTracker(
+    path=__import__("pathlib").Path(settings.balance_file),
+    initial_balance=settings.initial_balance,
 )
 from services.session import init_db
 
@@ -138,6 +144,11 @@ async def chat(body: ChatRequest) -> ChatResponse:
     # 6. Сохраняем ответ ассистента в БД
     session_store.append_assistant(body.session_id, reply)
 
+    # 7. Списываем стоимость запроса с баланса
+    # Входные токены = весь контекст (history), выходные = ответ
+    input_text = " ".join(m.get("content", "") for m in history)
+    balance_tracker.charge_llm(input_text=input_text, output_text=reply)
+
     logger.info(
         "Chat response | session=%s | reply_len=%d | total_messages=%d",
         body.session_id, len(reply), len(session_store.get_history(body.session_id)),
@@ -225,7 +236,22 @@ async def synthesize_speech(body: TTSRequest) -> Response:
     except TTSError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
+    # Списываем стоимость TTS
+    balance_tracker.charge_tts(clean_text)
+
     return Response(content=audio_bytes, media_type="audio/ogg")
+
+
+# ---------------------------------------------------------------------------
+# Routes — balance
+# ---------------------------------------------------------------------------
+@app.get("/api/balance", tags=["meta"])
+async def get_balance() -> dict:
+    """
+    Возвращает текущий баланс и процент от начального депозита.
+    Используется фронтендом для Fuel Gauge.
+    """
+    return balance_tracker.snapshot()
 
 
 # ---------------------------------------------------------------------------

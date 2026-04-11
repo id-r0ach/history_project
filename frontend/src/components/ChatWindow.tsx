@@ -15,6 +15,7 @@ import { TypingIndicator } from "./TypingIndicator";
 interface ChatWindowProps {
   characterId: string;
   character: CharacterInfo | null;
+  onMessageSent?: () => void;
 }
 
 function storageKey(characterId: string): string {
@@ -45,7 +46,7 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function ChatWindow({ characterId, character }: ChatWindowProps) {
+export function ChatWindow({ characterId, character, onMessageSent }: ChatWindowProps) {
   const [sessionId, setSessionId] = useState<string>(
     () => getOrCreateSessionId(characterId)
   );
@@ -149,6 +150,8 @@ export function ChatWindow({ characterId, character }: ChatWindowProps) {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
+      // Обновляем баланс после каждого ответа ИИ
+      onMessageSent?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Неизвестная ошибка";
       setError(message);

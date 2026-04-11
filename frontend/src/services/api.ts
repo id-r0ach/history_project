@@ -4,6 +4,7 @@ import type {
   ChatResponse,
   HistoryResponse,
   ApiError,
+  BalanceInfo,
 } from "../types";
 
 const BASE_URL = "/api";
@@ -48,6 +49,10 @@ class ApiClient {
     await this.request<unknown>(`/sessions/${sessionId}`, {
       method: "DELETE",
     });
+  }
+
+  async getBalance(): Promise<BalanceInfo> {
+    return this.request<BalanceInfo>("/balance");
   }
 
   async synthesizeSpeech(characterId: string, text: string): Promise<Blob> {

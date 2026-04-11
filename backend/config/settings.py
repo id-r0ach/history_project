@@ -15,8 +15,12 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:5173"
 
     # Yandex SpeechKit
-    yandex_api_key: str = ""          # IAM-токен или API-ключ сервисного аккаунта
-    yandex_folder_id: str = ""        # folder_id облачного каталога
+    yandex_api_key: str = ""
+    yandex_folder_id: str = ""
+
+    # Balance tracker
+    initial_balance: float = 500.0          # начальный депозит в рублях
+    balance_file: str = "/app/data/balance.json"  # путь внутри Docker-контейнера
 
     @property
     def origins_list(self) -> list[str]:
