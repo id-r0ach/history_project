@@ -8,6 +8,7 @@ interface CharacterSidebarProps {
   isLoading: boolean;
   balance: BalanceInfo | null;
   isBalanceLoading: boolean;
+  onOpenSettings: () => void;
 }
 
 // Инициалы для аватаров — берём первую букву имени если нет переопределения
@@ -47,6 +48,7 @@ export function CharacterSidebar({
   isLoading,
   balance,
   isBalanceLoading,
+  onOpenSettings,
 }: CharacterSidebarProps) {
   // Группируем персонажей по эпохам, сохраняя порядок ERA_ORDER
   const grouped = ERA_ORDER.reduce<Record<string, CharacterInfo[]>>((acc, era) => {
@@ -150,7 +152,7 @@ export function CharacterSidebar({
       </nav>
 
       {/* Fuel Gauge */}
-      <FuelGauge balance={balance} isLoading={isBalanceLoading} />
+      <FuelGauge balance={balance} isLoading={isBalanceLoading} onOpenSettings={onOpenSettings} />
 
       {/* Footer */}
       <div className="px-6 py-4 border-t border-soviet-gray/30">

@@ -1,92 +1,71 @@
-import type { BalanceInfo } from "../types";
+import type { BalanceInfo, ServiceBalance } from "../types";
 
 interface FuelGaugeProps {
   balance: BalanceInfo | null;
   isLoading: boolean;
+  onOpenSettings: () => void;
 }
 
-function getLevel(percent: number): "critical" | "warning" | "ok" {
-  if (percent < 10) return "critical";
-  if (percent < 50) return "warning";
+function getLevel(pct: number): "critical" | "warning" | "ok" {
+  if (pct < 10) return "critical";
+  if (pct < 50) return "warning";
   return "ok";
 }
 
-function getLevelLabel(percent: number): string {
-  if (percent < 10) return "Критический уровень";
-  if (percent < 50) return "Требуется пополнение";
-  return "Система готова";
+const BAR_COLOR   = { critical: "bg-red-500",    warning: "bg-yellow-500",  ok: "bg-green-500" };
+const TEXT_COLOR  = { critical: "text-red-400",  warning: "text-yellow-400", ok: "text-green-400" };
+
+function MiniBar({ b, label }: { b: ServiceBalance; label: string }) {
+  const pct   = Math.max(0, Math.min(100, b.percent));
+  const level = getLevel(pct);
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-[9px] font-body uppercase tracking-wider text-soviet-gray-light/70">
+          {label}
+        </span>
+        <span className={`text-[9px] font-body font-semibold tabular-nums ${TEXT_COLOR[level]} ${level === "critical" ? "animate-pulse" : ""}`}>
+          {b.current.toFixed(2)} ₽
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-soviet-dark overflow-hidden border border-soviet-gray/15">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${BAR_COLOR[level]}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
-export function FuelGauge({ balance, isLoading }: FuelGaugeProps) {
-  if (isLoading || !balance) {
-    return (
-      <div className="px-5 py-4 border-t border-soviet-gray/20">
-        <div className="h-3 rounded-full bg-soviet-dark-3 animate-pulse" />
-      </div>
-    );
-  }
-
-  const percent = Math.max(0, Math.min(100, balance.percent));
-  const level = getLevel(percent);
-
-  const barColor =
-    level === "critical" ? "bg-red-500" :
-    level === "warning"  ? "bg-yellow-500" :
-                           "bg-green-500";
-
-  const textColor =
-    level === "critical" ? "text-red-400" :
-    level === "warning"  ? "text-yellow-400" :
-                           "text-green-400";
-
-  const glowColor =
-    level === "critical" ? "shadow-red-500/50" :
-    level === "warning"  ? "shadow-yellow-500/30" :
-                           "shadow-green-500/30";
-
+export function FuelGauge({ balance, isLoading, onOpenSettings }: FuelGaugeProps) {
   return (
-    <div className="px-5 py-4 border-t border-soviet-gray/20">
+    <div className="px-4 py-3 border-t border-soviet-gray/20">
       {/* Заголовок */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-body tracking-widest uppercase text-soviet-gray-light">
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="text-[9px] font-body tracking-widest uppercase text-soviet-gray-light/60">
           Топливо системы
         </span>
-        <span className={`text-[10px] font-body font-semibold ${textColor} ${level === "critical" ? "animate-pulse" : ""}`}>
-          {percent.toFixed(1)}%
-        </span>
+        <button
+          onClick={onOpenSettings}
+          title="Настройки"
+          className="text-soviet-gray-light/50 hover:text-soviet-beige transition-colors duration-150 text-xs px-1"
+        >
+          ⚙︎
+        </button>
       </div>
 
-      {/* Прогресс-бар */}
-      <div className="relative h-2.5 rounded-full bg-soviet-dark overflow-hidden border border-soviet-gray/20">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ease-out ${barColor} shadow-sm ${glowColor}`}
-          style={{ width: `${percent}%` }}
-        />
-        {/* Засечки */}
-        {[25, 50, 75].map((mark) => (
-          <div
-            key={mark}
-            className="absolute top-0 bottom-0 w-px bg-soviet-dark/60"
-            style={{ left: `${mark}%` }}
-          />
-        ))}
-      </div>
-
-      {/* Статус + сумма */}
-      <div className="flex items-center justify-between mt-1.5">
-        <span className={`text-[10px] font-body italic ${textColor} ${level === "critical" ? "animate-pulse" : ""}`}>
-          {getLevelLabel(percent)}
-        </span>
-        <span className="text-[10px] font-body text-soviet-gray-light tabular-nums">
-          {balance.current.toFixed(2)} ₽
-        </span>
-      </div>
-
-      {/* Детали — видны при наведении */}
-      <div className="mt-1.5 text-[9px] font-body text-soviet-gray-light/50 flex justify-between">
-        <span>Запросов: {balance.requests}</span>
-        <span>Потрачено: {balance.spent.toFixed(2)} ₽</span>
-      </div>
+      {isLoading || !balance ? (
+        <div className="space-y-2">
+          <div className="h-1.5 rounded-full bg-soviet-dark-3 animate-pulse" />
+          <div className="h-1.5 rounded-full bg-soviet-dark-3 animate-pulse" />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <MiniBar b={balance.llm} label="LLM" />
+          <MiniBar b={balance.tts} label="TTS" />
+        </div>
+      )}
     </div>
   );
 }

@@ -18,9 +18,10 @@ class Settings(BaseSettings):
     yandex_api_key: str = ""
     yandex_folder_id: str = ""
 
-    # Balance tracker
-    initial_balance: float = 500.0          # начальный депозит в рублях
-    balance_file: str = "/app/data/balance.json"  # путь внутри Docker-контейнера
+    # Balance tracker — два отдельных счёта
+    data_dir: str = "/app/data"
+    llm_initial_balance: float = 95.0   # RouterAI начальный депозит
+    tts_initial_balance: float = 95.0   # Yandex TTS начальный депозит
 
     @property
     def origins_list(self) -> list[str]:

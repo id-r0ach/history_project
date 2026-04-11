@@ -23,12 +23,19 @@ export interface ApiError {
   detail: string;
 }
 
-export interface BalanceInfo {
+export interface ServiceBalance {
+  service: string;
   current: number;
   initial: number;
   spent: number;
   requests: number;
   percent: number;
+}
+
+export interface BalanceInfo {
+  llm: ServiceBalance;
+  tts: ServiceBalance;
+  total_percent: number;
 }
 
 export type MessageRole = "user" | "assistant";

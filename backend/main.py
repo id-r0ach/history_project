@@ -20,8 +20,9 @@ tts_service = YandexTTSService(
 
 # Инициализируем трекер баланса
 balance_tracker = BalanceTracker(
-    path=__import__("pathlib").Path(settings.balance_file),
-    initial_balance=settings.initial_balance,
+    data_dir=__import__("pathlib").Path(settings.data_dir),
+    llm_initial=settings.llm_initial_balance,
+    tts_initial=settings.tts_initial_balance,
 )
 from services.session import init_db
 
@@ -247,10 +248,32 @@ async def synthesize_speech(body: TTSRequest) -> Response:
 # ---------------------------------------------------------------------------
 @app.get("/api/balance", tags=["meta"])
 async def get_balance() -> dict:
+    """Возвращает текущий баланс обоих сервисов."""
+    return balance_tracker.snapshot()
+
+
+class BalanceSettingsRequest(_BaseModel):
+    llm_current: float | None = None    # текущий остаток LLM (₽)
+    llm_initial: float | None = None    # начальный депозит LLM (₽)
+    tts_current: float | None = None    # текущий остаток TTS (₽)
+    tts_initial: float | None = None    # начальный депозит TTS (₽)
+
+
+@app.post("/api/settings/balance", tags=["meta"])
+async def update_balance_settings(body: BalanceSettingsRequest) -> dict:
     """
-    Возвращает текущий баланс и процент от начального депозита.
-    Используется фронтендом для Fuel Gauge.
+    Обновляет начальный депозит и/или текущий остаток каждого сервиса.
+    Вызывается из панели настроек фронтенда.
     """
+    if body.llm_initial is not None:
+        balance_tracker.llm.update_initial(body.llm_initial)
+    if body.llm_current is not None:
+        balance_tracker.llm.update_current(body.llm_current)
+    if body.tts_initial is not None:
+        balance_tracker.tts.update_initial(body.tts_initial)
+    if body.tts_current is not None:
+        balance_tracker.tts.update_current(body.tts_current)
+    logger.info("Balance settings updated: %s", body.model_dump(exclude_none=True))
     return balance_tracker.snapshot()
 
 

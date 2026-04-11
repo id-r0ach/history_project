@@ -3,6 +3,7 @@ import type { CharacterInfo, BalanceInfo } from "./types";
 import { apiClient } from "./services/api";
 import { CharacterSidebar } from "./components/CharacterSidebar";
 import { ChatWindow } from "./components/ChatWindow";
+import { SettingsModal } from "./components/SettingsModal";
 
 // Fallback characters shown while fetching from backend
 const FALLBACK_CHARACTERS: CharacterInfo[] = [
@@ -35,6 +36,7 @@ export default function App() {
   const [isFetching, setIsFetching] = useState(true);
   const [balance, setBalance] = useState<BalanceInfo | null>(null);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const refreshBalance = useCallback(() => {
     apiClient.getBalance()
@@ -75,6 +77,7 @@ export default function App() {
         isLoading={isFetching}
         balance={balance}
         isBalanceLoading={isBalanceLoading}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
       <main className="flex-1 min-w-0 h-full">
         {selectedId ? (
@@ -90,6 +93,12 @@ export default function App() {
           </div>
         )}
       </main>
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        balance={balance}
+        onBalanceUpdate={(b) => { setBalance(b); }}
+      />
     </div>
   );
 }

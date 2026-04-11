@@ -55,6 +55,16 @@ class ApiClient {
     return this.request<BalanceInfo>("/balance");
   }
 
+  async updateBalanceSettings(payload: {
+    llm_current?: number; llm_initial?: number;
+    tts_current?: number; tts_initial?: number;
+  }): Promise<BalanceInfo> {
+    return this.request<BalanceInfo>("/settings/balance", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
   async synthesizeSpeech(characterId: string, text: string): Promise<Blob> {
     const response = await fetch(`${BASE_URL}/tts`, {
       method: "POST",
