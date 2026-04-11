@@ -170,7 +170,30 @@ async def delete_session(session_id: str) -> SessionInfo:
 # ---------------------------------------------------------------------------
 # Routes — TTS (Yandex SpeechKit)
 # ---------------------------------------------------------------------------
+import re as _re
 from pydantic import BaseModel as _BaseModel
+
+
+def _strip_markdown(text: str) -> str:
+    """Убирает markdown-разметку перед синтезом речи."""
+    # **жирный** и *курсив* → текст без звёздочек
+    text = _re.sub(r"\*{1,3}(.+?)\*{1,3}", r"\1", text)
+    # __жирный__ и _курсив_
+    text = _re.sub(r"_{1,3}(.+?)_{1,3}", r"\1", text)
+    # `код`
+    text = _re.sub(r"`(.+?)`", r"\1", text)
+    # ### Заголовки
+    text = _re.sub(r"^#{1,6}\s+", "", text, flags=_re.MULTILINE)
+    # > цитаты
+    text = _re.sub(r"^\s*>\s+", "", text, flags=_re.MULTILINE)
+    # — пункты списка (* / - / 1.)
+    text = _re.sub(r"^\s*[-*]\s+", "", text, flags=_re.MULTILINE)
+    text = _re.sub(r"^\s*\d+\.\s+", "", text, flags=_re.MULTILINE)
+    # Горизонтальные разделители ---
+    text = _re.sub(r"^-{3,}$", "", text, flags=_re.MULTILINE)
+    # Множественные пустые строки → одна
+    text = _re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 class TTSRequest(_BaseModel):
     character_id: str
@@ -194,8 +217,11 @@ async def synthesize_speech(body: TTSRequest) -> Response:
     character = get_character(body.character_id)
     voice_id = character.voice_id if character else "ermil"
 
+    # Очищаем markdown перед синтезом — TTS читает символы буквально
+    clean_text = _strip_markdown(body.text)
+
     try:
-        audio_bytes = await tts_service.synthesize(body.text, voice_id=voice_id)
+        audio_bytes = await tts_service.synthesize(clean_text, voice_id=voice_id)
     except TTSError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 

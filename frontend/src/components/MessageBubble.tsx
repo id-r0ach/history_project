@@ -8,13 +8,59 @@ interface MessageBubbleProps {
 }
 
 const AVATARS: Record<string, string> = {
-  khrushchev: "Х",
-  stalin: "С",
-  lenin: "Л",
+  khrushchev: "Х", stalin: "С", lenin: "Л",
+  rurik: "Р", vladimir: "Вл", yaroslav: "Я",
+  ivan3: "И³", ivan4: "И⁴",
+  peter1: "П", catherine2: "Е", nicholas2: "Н",
+  brezhnev: "Б", gorbachev: "Г",
 };
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Превращает markdown-текст от ИИ в React-элементы:
+ * — **жирный** → <strong>
+ * — *курсив*   → <em>
+ * — \n\n       → новый абзац
+ * — \n         → <br>
+ */
+function renderMarkdown(text: string): React.ReactNode {
+  // Разбиваем на абзацы по двойному переносу
+  const paragraphs = text.split(/\n{2,}/);
+
+  return paragraphs.map((para, pi) => {
+    // Внутри абзаца разбиваем по одинарному переносу
+    const lines = para.split(/\n/);
+
+    const renderedLines = lines.map((line, li) => {
+      // Разбираем inline-разметку: **жирный** и *курсив*
+      const parts = line.split(/(\*{1,2}[^*]+\*{1,2})/g);
+      const nodes = parts.map((part, i) => {
+        if (/^\*\*[^*]+\*\*$/.test(part)) {
+          return <strong key={i} className="font-semibold text-soviet-cream">{part.slice(2, -2)}</strong>;
+        }
+        if (/^\*[^*]+\*$/.test(part)) {
+          return <em key={i} className="italic text-soviet-beige/90">{part.slice(1, -1)}</em>;
+        }
+        return <span key={i}>{part}</span>;
+      });
+
+      return (
+        <span key={li}>
+          {nodes}
+          {li < lines.length - 1 && <br />}
+        </span>
+      );
+    });
+
+    return (
+      <p key={pi} className={pi > 0 ? "mt-3" : ""}>
+        {renderedLines}
+      </p>
+    );
+  });
 }
 
 export function MessageBubble({ message, character }: MessageBubbleProps) {
@@ -45,9 +91,17 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
   const isPlaying = ttsState === "playing";
   const isError   = ttsState === "error";
 
+  // Для TTS отдаём чистый текст без markdown — бэкенд тоже чистит, двойная защита
+  const plainText = message.content
+    .replace(/\*{1,3}(.+?)\*{1,3}/g, "$1")
+    .replace(/_{1,3}(.+?)_{1,3}/g, "$1")
+    .replace(/`(.+?)`/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .trim();
+
   const handleSpeak = () => {
     if (!character) return;
-    void speak(character.id, message.content);
+    void speak(character.id, plainText);
   };
 
   return (
@@ -66,7 +120,7 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
           </span>
         )}
         <div className="bg-soviet-dark-3 border border-soviet-gray/20 text-soviet-beige px-4 py-3 rounded-2xl rounded-tl-sm font-body text-sm leading-relaxed shadow-md">
-          {message.content}
+          {renderMarkdown(message.content)}
         </div>
 
         {/* Нижняя строка: время + кнопка озвучки */}
