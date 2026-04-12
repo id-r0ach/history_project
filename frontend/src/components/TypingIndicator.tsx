@@ -6,13 +6,6 @@ interface TypingIndicatorProps {
   character: CharacterInfo | null;
 }
 
-const AVATARS: Record<string, string> = {
-  khrushchev: "Х", stalin: "С", lenin: "Л",
-  rurik: "Р", vladimir: "Вл", yaroslav: "Я",
-  ivan3: "И³", ivan4: "И⁴",
-  peter1: "П", catherine2: "Е", nicholas2: "Н",
-  brezhnev: "Б", gorbachev: "Г",
-};
 
 // Фразы по персонажам. Если персонаж не найден — используется DEFAULT
 const PHRASES: Record<string, string[]> = {

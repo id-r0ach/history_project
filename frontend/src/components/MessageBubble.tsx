@@ -8,14 +8,6 @@ interface MessageBubbleProps {
   character: CharacterInfo | null;
 }
 
-const AVATARS: Record<string, string> = {
-  khrushchev: "Х", stalin: "С", lenin: "Л",
-  rurik: "Р", vladimir: "Вл", yaroslav: "Я",
-  ivan3: "И³", ivan4: "И⁴",
-  peter1: "П", catherine2: "Е", nicholas2: "Н",
-  brezhnev: "Б", gorbachev: "Г",
-};
-
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
