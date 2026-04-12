@@ -1,4 +1,4 @@
-import { Volume2, VolumeX, Loader2 } from "lucide-react";
+import { Volume2, VolumeX, Loader2, Pause, Play } from "lucide-react";
 import type { Message, CharacterInfo } from "../types";
 import { useTTS } from "../hooks/useTTS";
 
@@ -89,9 +89,10 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
   // --- Кнопка озвучки ---
   const isLoading = ttsState === "loading";
   const isPlaying = ttsState === "playing";
+  const isPaused  = ttsState === "paused";
   const isError   = ttsState === "error";
+  const isActive  = isPlaying || isPaused;
 
-  // Для TTS отдаём чистый текст без markdown — бэкенд тоже чистит, двойная защита
   const plainText = message.content
     .replace(/\*{1,3}(.+?)\*{1,3}/g, "$1")
     .replace(/_{1,3}(.+?)_{1,3}/g, "$1")
@@ -103,6 +104,17 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
     if (!character) return;
     void speak(character.id, plainText);
   };
+
+  const buttonTitle  = isLoading ? "Загружаю…" : isPlaying ? "Пауза" : isPaused ? "Продолжить" : isError ? "Ошибка" : "Слушать";
+  const buttonLabel  = isLoading ? "…"          : isPlaying ? "Пауза" : isPaused ? "Играть"     : isError ? "Ошибка" : "Слушать";
+  const buttonIcon   = isLoading ? <Loader2 className="w-3 h-3 animate-spin" />
+                     : isPlaying ? <Pause   className="w-3 h-3" />
+                     : isPaused  ? <Play    className="w-3 h-3" />
+                     : isError   ? <VolumeX className="w-3 h-3" />
+                     :             <Volume2 className="w-3 h-3" />;
+  const buttonColor  = isActive ? "text-soviet-red-light border border-soviet-red/40 bg-soviet-red/10 hover:bg-soviet-red/20"
+                     : isError  ? "text-red-400 border border-red-800/40 bg-red-950/30"
+                     :            "text-soviet-gray-light border border-soviet-gray/20 hover:text-soviet-beige hover:border-soviet-gray/40 hover:bg-soviet-dark";
 
   return (
     <div className="flex gap-3 group">
@@ -133,34 +145,16 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
             <button
               onClick={handleSpeak}
               disabled={isLoading}
-              title={
-                isPlaying ? "Остановить" :
-                isError    ? "Ошибка озвучки" :
-                             "Озвучить"
-              }
+              title={buttonTitle}
               className={`
                 flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-body
-                transition-all duration-150
-                opacity-0 group-hover:opacity-100
-                ${isPlaying
-                  ? "text-soviet-red-light border border-soviet-red/40 bg-soviet-red/10 hover:bg-soviet-red/20"
-                  : isError
-                  ? "text-red-400 border border-red-800/40 bg-red-950/30"
-                  : "text-soviet-gray-light border border-soviet-gray/20 hover:text-soviet-beige hover:border-soviet-gray/40 hover:bg-soviet-dark"
-                }
+                transition-all duration-150 opacity-0 group-hover:opacity-100
+                ${buttonColor}
                 disabled:opacity-40 disabled:cursor-not-allowed
               `}
             >
-              {isLoading ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : isPlaying ? (
-                <VolumeX className="w-3 h-3" />
-              ) : (
-                <Volume2 className="w-3 h-3" />
-              )}
-              <span>
-                {isLoading ? "…" : isPlaying ? "Стоп" : isError ? "Ошибка" : "Слушать"}
-              </span>
+              {buttonIcon}
+              <span>{buttonLabel}</span>
             </button>
           )}
         </div>
