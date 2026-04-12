@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CharacterInfo } from "../types";
+import { TalkingAvatar } from "./TalkingAvatar";
 
 interface TypingIndicatorProps {
   character: CharacterInfo | null;
@@ -140,10 +141,13 @@ export function TypingIndicator({ character }: TypingIndicatorProps) {
   return (
     <div className="flex gap-3 items-end">
       {/* Avatar */}
-      <div className="w-8 h-8 rounded-full bg-soviet-dark-3 border border-soviet-red/40 flex items-center justify-center shrink-0">
-        <span className="text-soviet-beige font-display font-bold text-sm">
-          {character ? (AVATARS[character.id] ?? character.name[0]) : "?"}
-        </span>
+      <div className="shrink-0">
+        <TalkingAvatar
+          characterId={character?.id ?? ""}
+          characterName={character?.name ?? "?"}
+          isSpeaking={false}
+          size="sm"
+        />
       </div>
 
       {/* Bubble */}

@@ -11,6 +11,7 @@ import type { Message, CharacterInfo } from "../types";
 import { apiClient } from "../services/api";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
+import { TalkingAvatar } from "./TalkingAvatar";
 
 interface ChatWindowProps {
   characterId: string;
@@ -179,11 +180,12 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-9 h-9 rounded-full bg-soviet-dark-3 border border-soviet-red/50 flex items-center justify-center">
-                  <span className="font-display font-bold text-soviet-beige text-base">
-                    {character.name[0]}
-                  </span>
-                </div>
+                <TalkingAvatar
+                  characterId={character.id}
+                  characterName={character.name}
+                  isSpeaking={false}
+                  size="sm"
+                />
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-soviet-dark" />
               </div>
               <div>

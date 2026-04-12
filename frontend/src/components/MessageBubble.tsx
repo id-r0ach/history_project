@@ -1,6 +1,7 @@
 import { Loader2, Pause, Play, RotateCcw } from "lucide-react";
 import type { Message, CharacterInfo } from "../types";
 import { useTTS } from "../hooks/useTTS";
+import { TalkingAvatar } from "./TalkingAvatar";
 
 interface MessageBubbleProps {
   message: Message;
@@ -65,7 +66,7 @@ function renderMarkdown(text: string): React.ReactNode {
 
 export function MessageBubble({ message, character }: MessageBubbleProps) {
   const isUser = message.role === "user";
-  const { state: ttsState, speak, restart } = useTTS();
+  const { state: ttsState, speak, restart, isSpeaking } = useTTS();
 
   if (isUser) {
     return (
@@ -105,11 +106,14 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
 
   return (
     <div className="flex gap-3 group">
-      {/* Character avatar */}
-      <div className="w-8 h-8 rounded-full bg-soviet-dark-3 border border-soviet-red/40 flex items-center justify-center shrink-0 mt-0.5">
-        <span className="text-soviet-beige font-display font-bold text-sm">
-          {character ? (AVATARS[character.id] ?? character.name[0]) : "?"}
-        </span>
+      {/* Анимированный аватар */}
+      <div className="shrink-0 mt-0.5">
+        <TalkingAvatar
+          characterId={character?.id ?? ""}
+          characterName={character?.name ?? "?"}
+          isSpeaking={isSpeaking}
+          size="sm"
+        />
       </div>
 
       <div className="flex flex-col items-start max-w-[72%]">

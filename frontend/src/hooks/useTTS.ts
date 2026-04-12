@@ -107,5 +107,5 @@ export function useTTS() {
     [stop]
   );
 
-  return { state, speak, stop, pause, resume, restart };
+  return { state, speak, stop, pause, resume, restart, isSpeaking: state === "playing" };
 }
