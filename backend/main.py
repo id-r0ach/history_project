@@ -16,6 +16,7 @@ from services import RouterAIError, routerai_service, session_store, TTSError, Y
 tts_service = YandexTTSService(
     api_key=settings.yandex_api_key,
     folder_id=settings.yandex_folder_id,
+    cache_dir=__import__("pathlib").Path(settings.data_dir) / "tts_cache",
 )
 
 # Инициализируем трекер баланса
@@ -233,12 +234,16 @@ async def synthesize_speech(body: TTSRequest) -> Response:
     clean_text = _strip_markdown(body.text)
 
     try:
-        audio_bytes = await tts_service.synthesize(clean_text, voice_id=voice_id)
+        audio_bytes, from_cache = await tts_service.synthesize(clean_text, voice_id=voice_id)
     except TTSError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
-    # Списываем стоимость TTS
-    balance_tracker.charge_tts(clean_text)
+    # Списываем только если реально обратились к Яндексу (не из кеша)
+    if not from_cache:
+        balance_tracker.charge_tts(clean_text)
+        logger.info("TTS billed | chars=%d", len(clean_text))
+    else:
+        logger.info("TTS served from cache | chars=%d | no charge", len(clean_text))
 
     return Response(content=audio_bytes, media_type="audio/ogg")
 
@@ -248,8 +253,10 @@ async def synthesize_speech(body: TTSRequest) -> Response:
 # ---------------------------------------------------------------------------
 @app.get("/api/balance", tags=["meta"])
 async def get_balance() -> dict:
-    """Возвращает текущий баланс обоих сервисов."""
-    return balance_tracker.snapshot()
+    """Возвращает текущий баланс обоих сервисов + статистику TTS кеша."""
+    data = balance_tracker.snapshot()
+    data["tts_cache"] = tts_service.cache_stats()
+    return data
 
 
 class BalanceSettingsRequest(_BaseModel):
