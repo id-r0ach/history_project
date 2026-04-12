@@ -77,5 +77,35 @@ export function useTTS() {
     [state, stop, pause, resume]
   );
 
-  return { state, speak, stop, pause, resume };
+  const restart = useCallback(
+    async (characterId: string, text: string) => {
+      stop();
+      // Небольшая задержка чтобы stop() успел очистить состояние
+      await new Promise(r => setTimeout(r, 50));
+      setState("loading");
+      try {
+        const key = cacheKey(characterId, text);
+        let blob = browserCache.get(key);
+        if (!blob) {
+          blob = await apiClient.synthesizeSpeech(characterId, text);
+          browserCache.set(key, blob);
+        }
+        const url = URL.createObjectURL(blob);
+        objectUrlRef.current = url;
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => stop();
+        audio.onerror = () => { stop(); setState("error"); };
+        setState("playing");
+        await audio.play();
+      } catch {
+        stop();
+        setState("error");
+        setTimeout(() => setState("idle"), 3000);
+      }
+    },
+    [stop]
+  );
+
+  return { state, speak, stop, pause, resume, restart };
 }

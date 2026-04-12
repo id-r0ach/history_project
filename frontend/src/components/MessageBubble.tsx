@@ -1,4 +1,4 @@
-import { Loader2, Pause, Play } from "lucide-react";
+import { Loader2, Pause, Play, RotateCcw } from "lucide-react";
 import type { Message, CharacterInfo } from "../types";
 import { useTTS } from "../hooks/useTTS";
 
@@ -65,7 +65,7 @@ function renderMarkdown(text: string): React.ReactNode {
 
 export function MessageBubble({ message, character }: MessageBubbleProps) {
   const isUser = message.role === "user";
-  const { state: ttsState, speak } = useTTS();
+  const { state: ttsState, speak, restart } = useTTS();
 
   if (isUser) {
     return (
@@ -170,6 +170,21 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
                 >
                   <Pause className="w-3 h-3" />
                   <span>{isPlaying ? "Пауза" : "Пауза"}</span>
+                </button>
+              )}
+
+              {/* Кнопка Перезапуск — только когда играет или на паузе */}
+              {(isPlaying || isPaused) && (
+                <button
+                  onClick={() => void restart(character.id, plainText)}
+                  title="Сначала"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-body
+                    transition-all duration-150
+                    text-soviet-gray-light border border-soviet-gray/20
+                    hover:text-soviet-beige hover:border-soviet-gray/40 hover:bg-soviet-dark"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Сначала</span>
                 </button>
               )}
 
