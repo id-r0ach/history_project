@@ -91,8 +91,6 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
   const isPlaying = ttsState === "playing";
   const isPaused  = ttsState === "paused";
   const isError   = ttsState === "error";
-  const isActive  = isPlaying || isPaused;
-
   const plainText = message.content
     .replace(/\*{1,3}(.+?)\*{1,3}/g, "$1")
     .replace(/_{1,3}(.+?)_{1,3}/g, "$1")
@@ -104,17 +102,6 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
     if (!character) return;
     void speak(character.id, plainText);
   };
-
-  const buttonTitle  = isLoading ? "Загружаю…" : isPlaying ? "Пауза" : isPaused ? "Продолжить" : isError ? "Ошибка" : "Слушать";
-  const buttonLabel  = isLoading ? "…"          : isPlaying ? "Пауза" : isPaused ? "Играть"     : isError ? "Ошибка" : "Слушать";
-  const buttonIcon   = isLoading ? <Loader2 className="w-3 h-3 animate-spin" />
-                     : isPlaying ? <Pause   className="w-3 h-3" />
-                     : isPaused  ? <Play    className="w-3 h-3" />
-                     : isError   ? <VolumeX className="w-3 h-3" />
-                     :             <Volume2 className="w-3 h-3" />;
-  const buttonColor  = isActive ? "text-soviet-red-light border border-soviet-red/40 bg-soviet-red/10 hover:bg-soviet-red/20"
-                     : isError  ? "text-red-400 border border-red-800/40 bg-red-950/30"
-                     :            "text-soviet-gray-light border border-soviet-gray/20 hover:text-soviet-beige hover:border-soviet-gray/40 hover:bg-soviet-dark";
 
   return (
     <div className="flex gap-3 group">
@@ -142,20 +129,51 @@ export function MessageBubble({ message, character }: MessageBubbleProps) {
           </span>
 
           {character && (
-            <button
-              onClick={handleSpeak}
-              disabled={isLoading}
-              title={buttonTitle}
-              className={`
-                flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-body
-                transition-all duration-150 opacity-0 group-hover:opacity-100
-                ${buttonColor}
-                disabled:opacity-40 disabled:cursor-not-allowed
-              `}
-            >
-              {buttonIcon}
-              <span>{buttonLabel}</span>
-            </button>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+              {/* Кнопка Слушать / Играть */}
+              <button
+                onClick={handleSpeak}
+                disabled={isLoading || isPlaying}
+                title={isPaused ? "Продолжить" : "Слушать"}
+                className={`
+                  flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-body
+                  transition-all duration-150
+                  ${isPlaying
+                    ? "text-soviet-gray-light/40 border border-soviet-gray/10 cursor-not-allowed"
+                    : isPaused
+                    ? "text-soviet-red-light border border-soviet-red/40 bg-soviet-red/10 hover:bg-soviet-red/20"
+                    : isError
+                    ? "text-red-400 border border-red-800/40 bg-red-950/30"
+                    : "text-soviet-gray-light border border-soviet-gray/20 hover:text-soviet-beige hover:border-soviet-gray/40 hover:bg-soviet-dark"
+                  }
+                  disabled:cursor-not-allowed
+                `}
+              >
+                {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                <span>{isLoading ? "…" : isPaused ? "Играть" : isError ? "Ошибка" : "Слушать"}</span>
+              </button>
+
+              {/* Кнопка Пауза — только когда играет */}
+              {(isPlaying || isPaused) && (
+                <button
+                  onClick={() => void speak(character.id, plainText)}
+                  title={isPlaying ? "Пауза" : "Продолжить"}
+                  className={`
+                    flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-body
+                    transition-all duration-150
+                    ${isPlaying
+                      ? "text-soviet-red-light border border-soviet-red/40 bg-soviet-red/10 hover:bg-soviet-red/20"
+                      : "text-soviet-gray-light border border-soviet-gray/20 hover:text-soviet-beige hover:border-soviet-gray/40"
+                    }
+                  `}
+                >
+                  <Pause className="w-3 h-3" />
+                  <span>{isPlaying ? "Пауза" : "Пауза"}</span>
+                </button>
+              )}
+
+            </div>
           )}
         </div>
       </div>
