@@ -1,4 +1,4 @@
-import { Volume2, VolumeX, Loader2, Pause, Play } from "lucide-react";
+import { Loader2, Pause, Play } from "lucide-react";
 import type { Message, CharacterInfo } from "../types";
 import { useTTS } from "../hooks/useTTS";
 
