@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from characters import CHARACTERS, get_character
+from characters import CHARACTERS, build_system_prompt, get_character
 from config import settings
 from schemas import CharacterInfo, ChatRequest, ChatResponse, SessionInfo, HistoryMessage, HistoryResponse
 from services import RouterAIError, routerai_service, session_store, TTSError, YandexTTSService, BalanceTracker
@@ -112,7 +112,7 @@ async def chat(body: ChatRequest) -> ChatResponse:
         )
 
     # 2. Загружаем историю из БД (или создаём новую сессию с system prompt)
-    session_store.get_or_create(body.session_id, character.system_prompt)
+    session_store.get_or_create(body.session_id, build_system_prompt(character.system_prompt))
 
     # 3. Сохраняем сообщение пользователя в БД
     session_store.append_user(body.session_id, body.message)
