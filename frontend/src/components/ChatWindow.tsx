@@ -89,6 +89,27 @@ function getQuestionPrompt(characterId: string): string {
   return map[characterId] ?? "Задайте вопрос персонажу";
 }
 
+function getConversationPrompt(characterId: string): string {
+  const map: Record<string, string> = {
+    lenin: "Начните разговор с Владимиром Лениным",
+    stalin: "Начните разговор с Иосифом Сталиным",
+    khrushchev: "Начните разговор с Никитой Хрущёвым",
+    brezhnev: "Начните разговор с Леонидом Брежневым",
+    gorbachev: "Начните разговор с Михаилом Горбачёвым",
+    peter1: "Начните разговор с Петром I",
+    catherine2: "Начните разговор с Екатериной II",
+    alexander2: "Начните разговор с Александром II",
+    nicholas2: "Начните разговор с Николаем II",
+    ivan3: "Начните разговор с Иваном III",
+    ivan4: "Начните разговор с Иваном Грозным",
+    rurik: "Начните разговор с Рюриком",
+    vladimir: "Начните разговор с Владимиром Святославовичем",
+    yaroslav: "Начните разговор с Ярославом Мудрым",
+  };
+
+  return map[characterId] ?? "Начните разговор с персонажем";
+}
+
 export function ChatWindow({ characterId, character, onMessageSent }: ChatWindowProps) {
   const [sessionId, setSessionId] = useState<string>(() => getOrCreateSessionId(characterId));
   const [messages, setMessages] = useState<Message[]>([]);
@@ -266,7 +287,9 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
 
               <div className="min-w-0">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${theme.badgeClass}`}>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${theme.badgeClass}`}
+                  >
                     {character.era}
                   </span>
                   <span className="text-[11px] uppercase tracking-[0.25em] text-[var(--theme-muted)]">
@@ -325,7 +348,7 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
               </p>
               <p className="mt-3 text-sm leading-relaxed text-[var(--theme-text-soft)]">
                 {character
-                  ? `Перед вами ${theme.title.toLowerCase()}. Начните разговор с ${character.name} и задайте вопрос о событиях, власти, войнах или быте эпохи.`
+                  ? `Перед вами ${theme.title.toLowerCase()}. ${getConversationPrompt(character.id)} и задайте вопрос о событиях, власти, войнах или быте эпохи.`
                   : "Выберите исторического персонажа из списка слева."}
               </p>
             </div>
@@ -405,7 +428,7 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
         </div>
 
         <p className="mt-2 text-center text-xs text-[var(--theme-muted)]">
-          Enter — отправить · Shift+Enter — новая строка
+          Enter - отправить · Shift+Enter - новая строка
         </p>
       </div>
     </div>
