@@ -1,5 +1,6 @@
-import type { CharacterInfo, BalanceInfo } from "../types";
+import type { BalanceInfo, CharacterInfo } from "../types";
 import { FuelGauge } from "./FuelGauge";
+import { TalkingAvatar } from "./TalkingAvatar";
 
 interface CharacterSidebarProps {
   characters: CharacterInfo[];
@@ -11,32 +12,18 @@ interface CharacterSidebarProps {
   onOpenSettings: () => void;
 }
 
-// Инициалы для аватаров — берём первую букву имени если нет переопределения
-function getInitial(char: CharacterInfo): string {
-  const overrides: Record<string, string> = {
-    rurik: "Р", vladimir: "Вл", yaroslav: "Я",
-    ivan3: "И³", ivan4: "И⁴",
-    peter1: "П", catherine2: "Е", nicholas2: "Н",
-    lenin: "Л", stalin: "С", khrushchev: "Х",
-    brezhnev: "Б", gorbachev: "Г",
-  };
-  return overrides[char.id] ?? char.name[0];
-}
-
-// Цвет рамки аватара по эпохе
 const ERA_COLORS: Record<string, string> = {
-  "Рюриковичи":        "border-amber-600",
+  "Рюриковичи": "border-amber-600",
   "Московское царство": "border-orange-700",
-  "Романовы":          "border-yellow-600",
-  "СССР":              "border-soviet-red",
+  "Романовы": "border-yellow-600",
+  "СССР": "border-soviet-red",
 };
 
-// Цвет заголовка эпохи
 const ERA_LABEL_COLORS: Record<string, string> = {
-  "Рюриковичи":        "text-amber-500/70",
+  "Рюриковичи": "text-amber-500/70",
   "Московское царство": "text-orange-500/70",
-  "Романовы":          "text-yellow-500/70",
-  "СССР":              "text-soviet-red-light/70",
+  "Романовы": "text-yellow-500/70",
+  "СССР": "text-soviet-red-light/70",
 };
 
 const ERA_ORDER = ["Рюриковичи", "Московское царство", "Романовы", "СССР"];
@@ -50,96 +37,90 @@ export function CharacterSidebar({
   isBalanceLoading,
   onOpenSettings,
 }: CharacterSidebarProps) {
-  // Группируем персонажей по эпохам, сохраняя порядок ERA_ORDER
   const grouped = ERA_ORDER.reduce<Record<string, CharacterInfo[]>>((acc, era) => {
-    acc[era] = characters.filter((c) => c.era === era);
+    acc[era] = characters.filter((character) => character.era === era);
     return acc;
   }, {});
 
   return (
-    <aside className="w-72 shrink-0 flex flex-col bg-soviet-dark border-r border-soviet-gray/30 h-full">
-      {/* Logo */}
-      <div className="px-6 py-5 border-b border-soviet-gray/30">
+    <aside className="flex h-full w-80 shrink-0 flex-col border-r border-soviet-gray/30 bg-soviet-dark">
+      <div className="border-b border-soviet-gray/30 px-6 py-5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-soviet-red flex items-center justify-center rotate-45 shrink-0">
-            <span className="text-soviet-cream font-display font-bold text-sm -rotate-45">☆</span>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-soviet-red rotate-45">
+            <span className="-rotate-45 font-display text-sm font-bold text-soviet-cream">☆</span>
           </div>
           <div>
-            <h1 className="font-display text-soviet-cream font-bold text-base leading-tight tracking-wide">
+            <h1 className="font-display text-base font-bold leading-tight tracking-wide text-soviet-cream">
               История России
             </h1>
-            <p className="text-soviet-gray-light text-xs font-body mt-0.5 tracking-widest uppercase">
+            <p className="mt-0.5 font-body text-xs uppercase tracking-widest text-soviet-gray-light">
               Диалоги с историей
             </p>
           </div>
         </div>
       </div>
 
-      {/* Character list grouped by era */}
       <nav className="flex-1 overflow-y-auto pb-4 scrollbar-thin">
         {isLoading ? (
-          <div className="space-y-2 px-3 pt-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-14 rounded-lg bg-soviet-dark-3 animate-pulse" />
+          <div className="space-y-3 px-3 pt-4">
+            {[1, 2, 3, 4, 5].map((item) => (
+              <div key={item} className="h-20 animate-pulse rounded-xl bg-soviet-dark-3" />
             ))}
           </div>
         ) : (
           ERA_ORDER.map((era) => {
             const group = grouped[era];
-            if (!group || group.length === 0) return null;
+            if (!group?.length) return null;
+
             const borderColor = ERA_COLORS[era] ?? "border-soviet-gray";
             const labelColor = ERA_LABEL_COLORS[era] ?? "text-soviet-gray-light";
+
             return (
               <div key={era} className="mt-4">
-                {/* Era header */}
-                <div className="px-5 pb-1.5 flex items-center gap-2">
-                  <span className={`text-[10px] font-body font-semibold tracking-widest uppercase ${labelColor}`}>
+                <div className="flex items-center gap-2 px-5 pb-1.5">
+                  <span className={`text-[10px] font-body font-semibold uppercase tracking-widest ${labelColor}`}>
                     {era}
                   </span>
-                  <div className="flex-1 h-px bg-soviet-gray/15" />
+                  <div className="h-px flex-1 bg-soviet-gray/15" />
                 </div>
 
-                {/* Characters in this era */}
-                <div className="px-3 space-y-0.5">
+                <div className="space-y-1 px-3">
                   {group.map((char) => {
                     const isSelected = char.id === selectedId;
+
                     return (
                       <button
                         key={char.id}
                         onClick={() => onSelect(char.id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150 group
-                          ${isSelected
-                            ? "bg-soviet-red/20 border border-soviet-red/40"
-                            : "border border-transparent hover:bg-soviet-dark-3 hover:border-soviet-gray/20"
-                          }`}
+                        className={`group flex w-full items-center gap-4 rounded-xl border px-3 py-3 text-left transition-all duration-150 ${
+                          isSelected
+                            ? "border-soviet-red/40 bg-soviet-red/20"
+                            : "border-transparent hover:border-soviet-gray/20 hover:bg-soviet-dark-3"
+                        }`}
                       >
-                        {/* Avatar */}
-                        <div
-                          className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center border-2
-                            ${isSelected ? borderColor : "border-soviet-gray/30"}
-                            bg-soviet-dark-2 transition-all duration-150`}
-                        >
-                          <span className="font-display font-bold text-soviet-beige text-xs">
-                            {getInitial(char)}
-                          </span>
-                        </div>
+                        <TalkingAvatar
+                          characterId={char.id}
+                          characterName={char.name}
+                          isSpeaking={false}
+                          size="sm"
+                          className={isSelected ? borderColor : "border-soviet-gray/30"}
+                        />
 
-                        {/* Info */}
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p
-                            className={`font-body font-medium text-sm truncate transition-colors
-                              ${isSelected ? "text-soviet-cream" : "text-soviet-beige/80 group-hover:text-soviet-cream"}`}
+                            className={`truncate font-body text-sm font-medium transition-colors ${
+                              isSelected
+                                ? "text-soviet-cream"
+                                : "text-soviet-beige/80 group-hover:text-soviet-cream"
+                            }`}
                           >
                             {char.name}
                           </p>
-                          <p className="text-soviet-gray-light text-xs truncate mt-0.5">
-                            {char.years}
-                          </p>
+                          <p className="mt-0.5 truncate text-xs text-soviet-gray-light">{char.years}</p>
                         </div>
 
-                        {/* Active dot */}
                         {isSelected && (
-                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-soviet-red-light shrink-0" />
+                          <div className="ml-auto h-2 w-2 shrink-0 rounded-full bg-soviet-red-light" />
                         )}
                       </button>
                     );
@@ -151,13 +132,11 @@ export function CharacterSidebar({
         )}
       </nav>
 
-      {/* Fuel Gauge */}
       <FuelGauge balance={balance} isLoading={isBalanceLoading} onOpenSettings={onOpenSettings} />
 
-      {/* Footer */}
-      <div className="px-6 py-4 border-t border-soviet-gray/30">
-        <p className="text-soviet-gray-light text-xs font-body text-center leading-relaxed">
-          Исторические персонажи воссозданы с помощью&nbsp;AI.
+      <div className="border-t border-soviet-gray/30 px-6 py-4">
+        <p className="text-center font-body text-xs leading-relaxed text-soviet-gray-light">
+          Исторические персонажи воссозданы с помощью AI.
           <br />
           Ответы могут быть неточными.
         </p>

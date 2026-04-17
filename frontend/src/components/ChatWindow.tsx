@@ -196,7 +196,6 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
 
   const canSend = input.trim().length > 0 && !isLoading && !isLoadingHistory;
   const hasMessages = messages.length > 0;
-  const isCharacterSpeaking = Boolean(character && activeMessageId && (ttsState === "playing" || ttsState === "paused"));
 
   return (
     <div className="flex h-full flex-col bg-soviet-dark-2">
@@ -208,8 +207,8 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
                 <TalkingAvatar
                   characterId={character.id}
                   characterName={character.name}
-                  isSpeaking={isCharacterSpeaking}
-                  size="sm"
+                  isSpeaking={false}
+                  size="md"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-soviet-dark bg-green-500" />
               </div>
