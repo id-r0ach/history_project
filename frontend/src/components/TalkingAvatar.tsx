@@ -1,14 +1,4 @@
-/**
- * TalkingAvatar - animated character avatar.
- *
- * Logic:
- *   - isSpeaking=false -> show {id}_idle.png
- *   - isSpeaking=true  -> rapidly switch idle <-> speak
- *
- * If the avatar frames are missing, show a fallback with initials.
- * Images are loaded from frontend/public/avatars/.
- */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface TalkingAvatarProps {
   characterId: string;
@@ -19,9 +9,9 @@ interface TalkingAvatarProps {
 }
 
 const SIZE_CLASS = {
-  sm: "w-8 h-8 text-sm",
-  md: "w-10 h-10 text-base",
-  lg: "w-16 h-16 text-2xl",
+  sm: "h-8 w-8 text-sm",
+  md: "h-10 w-10 text-base",
+  lg: "h-16 w-16 text-2xl",
 };
 
 const INITIALS: Record<string, string> = {
@@ -40,10 +30,10 @@ const INITIALS: Record<string, string> = {
   gorbachev: "Г",
 };
 
-const AVATAR_BASE = `${import.meta.env.BASE_URL}avatars/`.replace(/([^:]\/)\/+/g, "$1");
-
-function avatarPath(id: string, state: "idle" | "speak"): string {
-  return `${AVATAR_BASE}${id}_${state}.png`;
+function publicAsset(path: string): string {
+  const base = import.meta.env.BASE_URL || "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return `${normalizedBase}${path}`.replace(/([^:]\/)\/+/g, "$1");
 }
 
 export function TalkingAvatar({
@@ -53,77 +43,43 @@ export function TalkingAvatar({
   size = "md",
   className = "",
 }: TalkingAvatarProps) {
+  const [idleOk, setIdleOk] = useState(true);
+  const [speakOk, setSpeakOk] = useState(true);
   const [frame, setFrame] = useState<"idle" | "speak">("idle");
-  const [hasImage, setHasImage] = useState<boolean | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const idleSrc = useMemo(() => publicAsset(`avatars/${characterId}_idle.png`), [characterId]);
+  const speakSrc = useMemo(() => publicAsset(`avatars/${characterId}_speak.png`), [characterId]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    setHasImage(null);
+    setIdleOk(true);
+    setSpeakOk(true);
     setFrame("idle");
-
-    const preload = (src: string) =>
-      new Promise<void>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load ${src}`));
-        img.src = src;
-      });
-
-    void Promise.all([
-      preload(avatarPath(characterId, "idle")),
-      preload(avatarPath(characterId, "speak")),
-    ])
-      .then(() => {
-        if (!cancelled) {
-          setHasImage(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setHasImage(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
   }, [characterId]);
 
   useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    if (isSpeaking && hasImage) {
-      intervalRef.current = setInterval(() => {
-        setFrame((current) => (current === "idle" ? "speak" : "idle"));
-      }, 160);
-    } else {
+    if (!isSpeaking || !idleOk || !speakOk) {
       setFrame("idle");
+      return;
     }
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [isSpeaking, hasImage]);
+    const timer = setInterval(() => {
+      setFrame((current) => (current === "idle" ? "speak" : "idle"));
+    }, 140);
+
+    return () => clearInterval(timer);
+  }, [idleOk, isSpeaking, speakOk]);
 
   const sizeClass = SIZE_CLASS[size];
   const initial = INITIALS[characterId] ?? characterName[0] ?? "?";
+  const canRenderImages = Boolean(characterId) && idleOk && speakOk;
 
-  if (hasImage !== true) {
+  if (!canRenderImages) {
     return (
       <div
         className={`
-          ${sizeClass} rounded-full shrink-0
-          bg-soviet-dark-3 border-2 border-soviet-red/40
-          flex items-center justify-center
-          ${isSpeaking ? "border-soviet-red animate-pulse" : ""}
+          ${sizeClass} flex shrink-0 items-center justify-center rounded-full
+          border-2 border-soviet-red/40 bg-soviet-dark-3
+          ${isSpeaking ? "animate-pulse border-soviet-red" : ""}
           ${className}
         `}
       >
@@ -137,17 +93,28 @@ export function TalkingAvatar({
   return (
     <div
       className={`
-        ${sizeClass} rounded-full shrink-0 overflow-hidden
-        border-2 transition-all duration-100
+        ${sizeClass} relative shrink-0 overflow-hidden rounded-full border-2 transition-all duration-100
         ${isSpeaking ? "border-soviet-red shadow-lg shadow-soviet-red/30" : "border-soviet-red/40"}
         ${className}
       `}
     >
       <img
-        src={avatarPath(characterId, frame)}
+        src={idleSrc}
         alt={characterName}
-        className="w-full h-full object-cover"
         draggable={false}
+        onError={() => setIdleOk(false)}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-75 ${
+          frame === "idle" || !isSpeaking ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <img
+        src={speakSrc}
+        alt={characterName}
+        draggable={false}
+        onError={() => setSpeakOk(false)}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-75 ${
+          frame === "speak" && isSpeaking ? "opacity-100" : "opacity-0"
+        }`}
       />
     </div>
   );

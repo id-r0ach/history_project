@@ -1,189 +1,161 @@
+import type { ReactNode } from "react";
 import { Loader2, Pause, Play, RotateCcw } from "lucide-react";
-import type { Message, CharacterInfo } from "../types";
-import { useTTS } from "../hooks/useTTS";
+
+import type { CharacterInfo, Message } from "../types";
+import type { TTSState } from "../hooks/useTTS";
 import { TalkingAvatar } from "./TalkingAvatar";
 
 interface MessageBubbleProps {
   message: Message;
   character: CharacterInfo | null;
+  ttsState: TTSState;
+  isSpeaking: boolean;
+  onSpeak: () => void;
+  onRestart: () => void;
 }
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
 
-/**
- * Превращает markdown-текст от ИИ в React-элементы:
- * — **жирный** → <strong>
- * — *курсив*   → <em>
- * — \n\n       → новый абзац
- * — \n         → <br>
- */
-function renderMarkdown(text: string): React.ReactNode {
-  // Разбиваем на абзацы по двойному переносу
+function renderMarkdown(text: string): ReactNode {
   const paragraphs = text.split(/\n{2,}/);
 
-  return paragraphs.map((para, pi) => {
-    // Внутри абзаца разбиваем по одинарному переносу
-    const lines = para.split(/\n/);
+  return paragraphs.map((paragraph, paragraphIndex) => {
+    const lines = paragraph.split(/\n/);
 
-    const renderedLines = lines.map((line, li) => {
-      // Разбираем inline-разметку: **жирный** и *курсив*
+    const renderedLines = lines.map((line, lineIndex) => {
       const parts = line.split(/(\*{1,2}[^*]+\*{1,2})/g);
-      const nodes = parts.map((part, i) => {
+      const nodes = parts.map((part, partIndex) => {
         if (/^\*\*[^*]+\*\*$/.test(part)) {
-          return <strong key={i} className="font-semibold text-soviet-cream">{part.slice(2, -2)}</strong>;
+          return (
+            <strong key={partIndex} className="font-semibold text-soviet-cream">
+              {part.slice(2, -2)}
+            </strong>
+          );
         }
+
         if (/^\*[^*]+\*$/.test(part)) {
-          return <em key={i} className="italic text-soviet-beige/90">{part.slice(1, -1)}</em>;
+          return (
+            <em key={partIndex} className="italic text-soviet-beige/90">
+              {part.slice(1, -1)}
+            </em>
+          );
         }
-        return <span key={i}>{part}</span>;
+
+        return <span key={partIndex}>{part}</span>;
       });
 
       return (
-        <span key={li}>
+        <span key={lineIndex}>
           {nodes}
-          {li < lines.length - 1 && <br />}
+          {lineIndex < lines.length - 1 && <br />}
         </span>
       );
     });
 
     return (
-      <p key={pi} className={pi > 0 ? "mt-3" : ""}>
+      <p key={paragraphIndex} className={paragraphIndex > 0 ? "mt-3" : ""}>
         {renderedLines}
       </p>
     );
   });
 }
 
-export function MessageBubble({ message, character }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  character,
+  ttsState,
+  isSpeaking,
+  onSpeak,
+  onRestart,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
-  const { state: ttsState, speak, restart, isSpeaking } = useTTS();
 
   if (isUser) {
     return (
-      <div className="flex justify-end gap-3 group">
-        <div className="flex flex-col items-end max-w-[72%]">
-          <div className="bg-soviet-red/80 text-soviet-cream px-4 py-3 rounded-2xl rounded-tr-sm font-body text-sm leading-relaxed shadow-lg">
+      <div className="group flex justify-end gap-3">
+        <div className="flex max-w-[72%] flex-col items-end">
+          <div className="rounded-2xl rounded-tr-sm bg-soviet-red/80 px-4 py-3 text-sm font-body leading-relaxed text-soviet-cream shadow-lg">
             {message.content}
           </div>
-          <span className="text-soviet-gray-light text-xs mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="mt-1.5 text-xs text-soviet-gray-light opacity-0 transition-opacity group-hover:opacity-100">
             {formatTime(message.timestamp)}
           </span>
         </div>
-        {/* User avatar */}
-        <div className="w-8 h-8 rounded-full bg-soviet-gray/40 border border-soviet-gray/60 flex items-center justify-center shrink-0 mt-0.5">
-          <span className="text-soviet-beige text-xs font-body font-medium">Вы</span>
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-soviet-gray/60 bg-soviet-gray/40">
+          <span className="text-xs font-body font-medium text-soviet-beige">Вы</span>
         </div>
       </div>
     );
   }
 
-  // --- Кнопка озвучки ---
-  const isLoading = ttsState === "loading";
-  const isPlaying = ttsState === "playing";
-  const isPaused  = ttsState === "paused";
-  const isError   = ttsState === "error";
-  const plainText = message.content
-    .replace(/\*{1,3}(.+?)\*{1,3}/g, "$1")
-    .replace(/_{1,3}(.+?)_{1,3}/g, "$1")
-    .replace(/`(.+?)`/g, "$1")
-    .replace(/^#{1,6}\s+/gm, "")
-    .trim();
-
-  const handleSpeak = () => {
-    if (!character) return;
-    void speak(character.id, plainText);
-  };
+  const isLoading = isSpeaking && ttsState === "loading";
+  const isPlaying = isSpeaking && ttsState === "playing";
+  const isPaused = isSpeaking && ttsState === "paused";
+  const isError = isSpeaking && ttsState === "error";
 
   return (
-    <div className="flex gap-3 group">
-      {/* Анимированный аватар */}
-      <div className="shrink-0 mt-0.5">
+    <div className="group flex gap-3">
+      <div className="mt-0.5 shrink-0">
         <TalkingAvatar
           characterId={character?.id ?? ""}
           characterName={character?.name ?? "?"}
-          isSpeaking={isSpeaking}
+          isSpeaking={isPlaying}
           size="sm"
         />
       </div>
 
-      <div className="flex flex-col items-start max-w-[72%]">
+      <div className="flex max-w-[72%] flex-col items-start">
         {character && (
-          <span className="text-soviet-red-light text-xs font-body font-medium mb-1 ml-1">
+          <span className="mb-1 ml-1 text-xs font-body font-medium text-soviet-red-light">
             {character.name}
           </span>
         )}
-        <div className="bg-soviet-dark-3 border border-soviet-gray/20 text-soviet-beige px-4 py-3 rounded-2xl rounded-tl-sm font-body text-sm leading-relaxed shadow-md">
+
+        <div className="rounded-2xl rounded-tl-sm border border-soviet-gray/20 bg-soviet-dark-3 px-4 py-3 text-sm font-body leading-relaxed text-soviet-beige shadow-md">
           {renderMarkdown(message.content)}
         </div>
 
-        {/* Нижняя строка: время + кнопка озвучки */}
-        <div className="flex items-center gap-2 mt-1.5 ml-1">
-          <span className="text-soviet-gray-light text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="mt-1.5 ml-1 flex items-center gap-2">
+          <span className="text-xs text-soviet-gray-light opacity-0 transition-opacity group-hover:opacity-100">
             {formatTime(message.timestamp)}
           </span>
 
           {character && (
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-
-              {/* Кнопка Слушать / Играть */}
+            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               <button
-                onClick={handleSpeak}
-                disabled={isLoading || isPlaying}
+                onClick={onSpeak}
                 title={isPaused ? "Продолжить" : "Слушать"}
                 className={`
-                  flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-body
-                  transition-all duration-150
-                  ${isPlaying
-                    ? "text-soviet-gray-light/40 border border-soviet-gray/10 cursor-not-allowed"
-                    : isPaused
-                    ? "text-soviet-red-light border border-soviet-red/40 bg-soviet-red/10 hover:bg-soviet-red/20"
-                    : isError
-                    ? "text-red-400 border border-red-800/40 bg-red-950/30"
-                    : "text-soviet-gray-light border border-soviet-gray/20 hover:text-soviet-beige hover:border-soviet-gray/40 hover:bg-soviet-dark"
+                  flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-body transition-all duration-150
+                  ${
+                    isPlaying
+                      ? "bg-soviet-red/10 text-soviet-red-light border-soviet-red/40 hover:bg-soviet-red/20"
+                      : isPaused
+                        ? "bg-soviet-red/10 text-soviet-red-light border-soviet-red/40 hover:bg-soviet-red/20"
+                        : isError
+                          ? "border-red-800/40 bg-red-950/30 text-red-400"
+                          : "border-soviet-gray/20 text-soviet-gray-light hover:border-soviet-gray/40 hover:bg-soviet-dark hover:text-soviet-beige"
                   }
-                  disabled:cursor-not-allowed
                 `}
               >
-                {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-                <span>{isLoading ? "…" : isPaused ? "Играть" : isError ? "Ошибка" : "Слушать"}</span>
+                {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                <span>
+                  {isLoading ? "..." : isPlaying ? "Пауза" : isPaused ? "Играть" : isError ? "Ошибка" : "Слушать"}
+                </span>
               </button>
 
-              {/* Кнопка Пауза — только когда играет */}
               {(isPlaying || isPaused) && (
                 <button
-                  onClick={() => void speak(character.id, plainText)}
-                  title={isPlaying ? "Пауза" : "Продолжить"}
-                  className={`
-                    flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-body
-                    transition-all duration-150
-                    ${isPlaying
-                      ? "text-soviet-red-light border border-soviet-red/40 bg-soviet-red/10 hover:bg-soviet-red/20"
-                      : "text-soviet-gray-light border border-soviet-gray/20 hover:text-soviet-beige hover:border-soviet-gray/40"
-                    }
-                  `}
-                >
-                  <Pause className="w-3 h-3" />
-                  <span>{isPlaying ? "Пауза" : "Пауза"}</span>
-                </button>
-              )}
-
-              {/* Кнопка Перезапуск — только когда играет или на паузе */}
-              {(isPlaying || isPaused) && (
-                <button
-                  onClick={() => void restart(character.id, plainText)}
+                  onClick={onRestart}
                   title="Сначала"
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-body
-                    transition-all duration-150
-                    text-soviet-gray-light border border-soviet-gray/20
-                    hover:text-soviet-beige hover:border-soviet-gray/40 hover:bg-soviet-dark"
+                  className="flex items-center gap-1 rounded-lg border border-soviet-gray/20 px-2 py-0.5 text-xs font-body text-soviet-gray-light transition-all duration-150 hover:border-soviet-gray/40 hover:bg-soviet-dark hover:text-soviet-beige"
                 >
-                  <RotateCcw className="w-3 h-3" />
+                  <RotateCcw className="h-3 w-3" />
                   <span>Сначала</span>
                 </button>
               )}
-
             </div>
           )}
         </div>

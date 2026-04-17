@@ -1,17 +1,18 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
-  useCallback,
   type KeyboardEvent,
 } from "react";
-import { Send, AlertCircle, RotateCcw, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, RotateCcw, Send } from "lucide-react";
 
-import type { Message, CharacterInfo } from "../types";
+import type { CharacterInfo, Message } from "../types";
 import { apiClient } from "../services/api";
+import { useTTS } from "../hooks/useTTS";
 import { MessageBubble } from "./MessageBubble";
-import { TypingIndicator } from "./TypingIndicator";
 import { TalkingAvatar } from "./TalkingAvatar";
+import { TypingIndicator } from "./TypingIndicator";
 
 interface ChatWindowProps {
   characterId: string;
@@ -28,8 +29,6 @@ function getOrCreateSessionId(characterId: string): string {
   const existing = localStorage.getItem(key);
   if (existing) return existing;
 
-  // crypto.randomUUID() работает только на HTTPS
-  // Фолбэк для HTTP (IP без сертификата)
   const newId =
     typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID()
@@ -48,56 +47,53 @@ function generateId(): string {
 }
 
 export function ChatWindow({ characterId, character, onMessageSent }: ChatWindowProps) {
-  const [sessionId, setSessionId] = useState<string>(
-    () => getOrCreateSessionId(characterId)
-  );
+  const [sessionId, setSessionId] = useState<string>(() => getOrCreateSessionId(characterId));
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+
+  const { state: ttsState, speak, restart, stop, isSpeaking } = useTTS();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // При смене персонажа — загружаем его session_id и подтягиваем историю из БД
   useEffect(() => {
     const sid = getOrCreateSessionId(characterId);
+
+    stop();
+    setActiveMessageId(null);
     setSessionId(sid);
     setMessages([]);
     setError(null);
     setInput("");
-
     setIsLoadingHistory(true);
 
     apiClient
       .getHistory(sid)
       .then((data) => {
-        // Конвертируем HistoryMessage[] → Message[]
-        // id и timestamp генерируем на фронтенде (в БД их нет)
-        const loaded: Message[] = data.messages.map((m) => ({
+        const loaded: Message[] = data.messages.map((message) => ({
           id: generateId(),
-          role: m.role,
-          content: m.content,
+          role: message.role,
+          content: message.content,
           timestamp: new Date(),
         }));
         setMessages(loaded);
       })
       .catch(() => {
-        // Если история недоступна — просто начинаем с чистого листа
         setMessages([]);
       })
       .finally(() => {
         setIsLoadingHistory(false);
       });
-  }, [characterId]);
+  }, [characterId, stop]);
 
-  // Авто-скролл вниз при новых сообщениях
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Авто-ресайз textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -105,13 +101,22 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [input]);
 
-  // Сброс диалога
+  useEffect(() => {
+    if (ttsState === "idle" || ttsState === "error") {
+      setActiveMessageId(null);
+    }
+  }, [ttsState]);
+
   const handleReset = useCallback(async () => {
+    stop();
+    setActiveMessageId(null);
+
     try {
       await apiClient.deleteSession(sessionId);
     } catch {
-      // Сессии может не быть на сервере — не страшно
+      // ignore missing session on backend
     }
+
     localStorage.removeItem(storageKey(characterId));
     const newSessionId = getOrCreateSessionId(characterId);
     setSessionId(newSessionId);
@@ -119,7 +124,7 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
     setError(null);
     setInput("");
     textareaRef.current?.focus();
-  }, [sessionId, characterId]);
+  }, [characterId, sessionId, stop]);
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
@@ -132,6 +137,8 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
       timestamp: new Date(),
     };
 
+    stop();
+    setActiveMessageId(null);
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
@@ -150,8 +157,8 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
         content: response.reply,
         timestamp: new Date(),
       };
+
       setMessages((prev) => [...prev, assistantMessage]);
-      // Обновляем баланс после каждого ответа ИИ
       onMessageSent?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Неизвестная ошибка";
@@ -160,7 +167,25 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
       setIsLoading(false);
       textareaRef.current?.focus();
     }
-  }, [input, isLoading, characterId, sessionId]);
+  }, [characterId, input, isLoading, onMessageSent, sessionId, stop]);
+
+  const handleSpeakMessage = useCallback(
+    async (message: Message) => {
+      if (!character || message.role !== "assistant") return;
+      setActiveMessageId(message.id);
+      await speak(character.id, message.content);
+    },
+    [character, speak]
+  );
+
+  const handleRestartMessage = useCallback(
+    async (message: Message) => {
+      if (!character || message.role !== "assistant") return;
+      setActiveMessageId(message.id);
+      await restart(character.id, message.content);
+    },
+    [character, restart]
+  );
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -171,43 +196,40 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
 
   const canSend = input.trim().length > 0 && !isLoading && !isLoadingHistory;
   const hasMessages = messages.length > 0;
+  const isCharacterSpeaking = Boolean(character && activeMessageId && (ttsState === "playing" || ttsState === "paused"));
 
   return (
-    <div className="flex flex-col h-full bg-soviet-dark-2">
-      {/* Header */}
+    <div className="flex h-full flex-col bg-soviet-dark-2">
       {character && (
-        <div className="px-6 py-4 border-b border-soviet-gray/30 bg-soviet-dark shrink-0">
+        <div className="shrink-0 border-b border-soviet-gray/30 bg-soviet-dark px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <TalkingAvatar
                   characterId={character.id}
                   characterName={character.name}
-                  isSpeaking={false}
+                  isSpeaking={isCharacterSpeaking}
                   size="sm"
                 />
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-soviet-dark" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-soviet-dark bg-green-500" />
               </div>
               <div>
-                <h2 className="font-display text-soviet-cream font-semibold text-base">
+                <h2 className="font-display text-base font-semibold text-soviet-cream">
                   {character.name}
                 </h2>
-                <p className="text-soviet-gray-light text-xs font-body">
+                <p className="text-xs font-body text-soviet-gray-light">
                   {character.description}
                 </p>
               </div>
             </div>
 
-            {/* Кнопка сброса — только если есть история */}
             {hasMessages && !isLoadingHistory && (
               <button
                 onClick={() => void handleReset()}
                 title="Начать новый диалог"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-soviet-gray-light
-                  hover:text-soviet-beige hover:bg-soviet-dark-3 border border-transparent
-                  hover:border-soviet-gray/30 transition-all duration-150 text-xs font-body"
+                className="flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-xs font-body text-soviet-gray-light transition-all duration-150 hover:border-soviet-gray/30 hover:bg-soviet-dark-3 hover:text-soviet-beige"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RotateCcw className="h-3.5 w-3.5" />
                 Новый диалог
               </button>
             )}
@@ -215,45 +237,41 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
         </div>
       )}
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 scrollbar-thin">
-
-        {/* Индикатор загрузки истории */}
+      <div className="flex-1 space-y-5 overflow-y-auto px-6 py-6 scrollbar-thin">
         {isLoadingHistory && (
-          <div className="flex items-center justify-center h-full gap-2 text-soviet-gray-light">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm font-body">Загружаем историю…</span>
+          <div className="flex h-full items-center justify-center gap-2 text-soviet-gray-light">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm font-body">Загружаем историю...</span>
           </div>
         )}
 
-        {/* Пустой экран — нет истории и не грузим */}
         {!isLoadingHistory && !hasMessages && (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-4 pb-10">
-            <div className="w-16 h-16 bg-soviet-red/10 border border-soviet-red/30 rounded-full flex items-center justify-center">
-              <span className="text-soviet-red-light text-2xl font-display font-bold">
-                {character?.name[0] ?? "?"}
-              </span>
-            </div>
+          <div className="flex h-full flex-col items-center justify-center gap-4 pb-10 text-center">
+            <TalkingAvatar
+              characterId={character?.id ?? ""}
+              characterName={character?.name ?? "?"}
+              isSpeaking={false}
+              size="lg"
+            />
             <div>
-              <p className="font-display text-soviet-cream text-lg font-semibold">
+              <p className="font-display text-lg font-semibold text-soviet-cream">
                 {character?.name ?? "Выберите персонажа"}
               </p>
-              <p className="text-soviet-gray-light text-sm font-body mt-1 max-w-xs">
+              <p className="mt-1 max-w-xs text-sm font-body text-soviet-gray-light">
                 {character
                   ? `Начните диалог с ${character.name}. Задайте любой вопрос об эпохе.`
                   : "Выберите исторического персонажа из списка слева."}
               </p>
             </div>
             {character && (
-              <div className="flex flex-wrap gap-2 justify-center max-w-sm">
-                {getStarterQuestions(character.id).map((q) => (
+              <div className="flex max-w-sm flex-wrap justify-center gap-2">
+                {getStarterQuestions(character.id).map((question) => (
                   <button
-                    key={q}
-                    onClick={() => setInput(q)}
-                    className="text-xs font-body text-soviet-beige/70 border border-soviet-gray/30 rounded-full px-3 py-1.5
-                      hover:border-soviet-red/40 hover:text-soviet-beige hover:bg-soviet-red/10 transition-all duration-150"
+                    key={question}
+                    onClick={() => setInput(question)}
+                    className="rounded-full border border-soviet-gray/30 px-3 py-1.5 text-xs font-body text-soviet-beige/70 transition-all duration-150 hover:border-soviet-red/40 hover:bg-soviet-red/10 hover:text-soviet-beige"
                   >
-                    {q}
+                    {question}
                   </button>
                 ))}
               </div>
@@ -261,16 +279,24 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
           </div>
         )}
 
-        {/* Сообщения из истории + новые */}
-        {!isLoadingHistory && messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} character={character} />
-        ))}
+        {!isLoadingHistory &&
+          messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              character={character}
+              ttsState={ttsState}
+              isSpeaking={activeMessageId === message.id && (ttsState === "playing" || ttsState === "paused")}
+              onSpeak={() => void handleSpeakMessage(message)}
+              onRestart={() => void handleRestartMessage(message)}
+            />
+          ))}
 
         {isLoading && <TypingIndicator character={character} />}
 
         {error && (
-          <div className="flex items-start gap-2.5 bg-red-950/40 border border-red-800/50 rounded-xl px-4 py-3 text-red-300 text-sm font-body">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-800/50 bg-red-950/40 px-4 py-3 text-sm font-body text-red-300">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
             <span>{error}</span>
           </div>
         )}
@@ -278,11 +304,11 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="px-6 py-4 border-t border-soviet-gray/30 bg-soviet-dark shrink-0">
+      <div className="shrink-0 border-t border-soviet-gray/30 bg-soviet-dark px-6 py-4">
         <div
-          className={`flex items-end gap-3 bg-soviet-dark-3 border rounded-2xl px-4 py-3 transition-colors duration-150
-            ${canSend || input.length > 0 ? "border-soviet-red/40" : "border-soviet-gray/30"}`}
+          className={`flex items-end gap-3 rounded-2xl border bg-soviet-dark-3 px-4 py-3 transition-colors duration-150 ${
+            canSend || input.length > 0 ? "border-soviet-red/40" : "border-soviet-gray/30"
+          }`}
         >
           <textarea
             ref={textareaRef}
@@ -291,32 +317,30 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
             onKeyDown={handleKeyDown}
             placeholder={
               isLoadingHistory
-                ? "Загружаем историю…"
+                ? "Загружаем историю..."
                 : character
-                ? `Задайте вопрос ${character.name}…`
-                : "Выберите персонажа для начала диалога…"
+                  ? `Задайте вопрос ${character.name}...`
+                  : "Выберите персонажа для начала диалога..."
             }
             disabled={!character || isLoading || isLoadingHistory}
             rows={1}
-            className="flex-1 bg-transparent text-soviet-cream placeholder-soviet-gray-light text-sm font-body
-              resize-none outline-none leading-relaxed disabled:opacity-50 min-h-[24px]"
+            className="min-h-[24px] flex-1 resize-none bg-transparent text-sm font-body leading-relaxed text-soviet-cream outline-none placeholder-soviet-gray-light disabled:opacity-50"
           />
           <button
             onClick={() => void sendMessage()}
             disabled={!canSend}
             aria-label="Отправить сообщение"
-            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-150
-              ${
-                canSend
-                  ? "bg-soviet-red hover:bg-soviet-red-bright text-white shadow-lg shadow-soviet-red/30"
-                  : "bg-soviet-gray/20 text-soviet-gray-light cursor-not-allowed"
-              }`}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-150 ${
+              canSend
+                ? "bg-soviet-red text-white shadow-lg shadow-soviet-red/30 hover:bg-soviet-red-bright"
+                : "cursor-not-allowed bg-soviet-gray/20 text-soviet-gray-light"
+            }`}
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send className="h-3.5 w-3.5" />
           </button>
         </div>
-        <p className="text-soviet-gray-light text-xs font-body mt-2 text-center">
-          Enter — отправить · Shift+Enter — новая строка
+        <p className="mt-2 text-center text-xs font-body text-soviet-gray-light">
+          Enter - отправить · Shift+Enter - новая строка
         </p>
       </div>
     </div>
@@ -340,6 +364,12 @@ function getStarterQuestions(characterId: string): string[] {
       "Что такое НЭП?",
       "Расскажите о диктатуре пролетариата",
     ],
+    ivan4: [
+      "Как вы создавали опричнину?",
+      "Почему вы приняли титул царя?",
+      "Расскажите о взятии Казани",
+    ],
   };
+
   return map[characterId] ?? [];
 }

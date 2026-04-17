@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiClient } from "../services/api";
 
 export type TTSState = "idle" | "loading" | "playing" | "paused" | "error";
@@ -11,20 +11,39 @@ function cacheKey(characterId: string, text: string): string {
 
 export function useTTS() {
   const [state, setState] = useState<TTSState>("idle");
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const resetErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const stop = useCallback(() => {
+  const clearErrorTimer = useCallback(() => {
+    if (resetErrorTimerRef.current) {
+      clearTimeout(resetErrorTimerRef.current);
+      resetErrorTimerRef.current = null;
+    }
+  }, []);
+
+  const cleanupAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
       audioRef.current = null;
     }
+
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
-    setState("idle");
   }, []);
+
+  const stop = useCallback(() => {
+    clearErrorTimer();
+    cleanupAudio();
+    setActiveKey(null);
+    setState("idle");
+  }, [cleanupAudio, clearErrorTimer]);
 
   const pause = useCallback(() => {
     if (audioRef.current && state === "playing") {
@@ -33,25 +52,27 @@ export function useTTS() {
     }
   }, [state]);
 
-  const resume = useCallback(() => {
+  const resume = useCallback(async () => {
     if (audioRef.current && state === "paused") {
-      void audioRef.current.play();
-      setState("playing");
+      try {
+        await audioRef.current.play();
+        setState("playing");
+      } catch {
+        cleanupAudio();
+        setActiveKey(null);
+        setState("error");
+      }
     }
-  }, [state]);
+  }, [cleanupAudio, state]);
 
-  const speak = useCallback(
-    async (characterId: string, text: string) => {
-      if (state === "loading") return;
-
-      // Пауза/возобновление если уже загружено
-      if (state === "playing") { pause(); return; }
-      if (state === "paused")  { resume(); return; }
-
+  const playKey = useCallback(
+    async (key: string, characterId: string, text: string) => {
+      clearErrorTimer();
+      cleanupAudio();
+      setActiveKey(key);
       setState("loading");
 
       try {
-        const key = cacheKey(characterId, text);
         let blob = browserCache.get(key);
         if (!blob) {
           blob = await apiClient.synthesizeSpeech(characterId, text);
@@ -63,49 +84,81 @@ export function useTTS() {
 
         const audio = new Audio(url);
         audioRef.current = audio;
-        audio.onended = () => stop();
-        audio.onerror = () => { stop(); setState("error"); };
+        audio.onended = () => {
+          cleanupAudio();
+          setActiveKey(null);
+          setState("idle");
+        };
+        audio.onerror = () => {
+          cleanupAudio();
+          setActiveKey(null);
+          setState("error");
+          resetErrorTimerRef.current = setTimeout(() => {
+            setState("idle");
+          }, 3000);
+        };
 
-        setState("playing");
         await audio.play();
+        setState("playing");
       } catch {
-        stop();
+        cleanupAudio();
+        setActiveKey(null);
         setState("error");
-        setTimeout(() => setState("idle"), 3000);
+        resetErrorTimerRef.current = setTimeout(() => {
+          setState("idle");
+        }, 3000);
       }
     },
-    [state, stop, pause, resume]
+    [cleanupAudio, clearErrorTimer]
+  );
+
+  const speak = useCallback(
+    async (characterId: string, text: string) => {
+      const key = cacheKey(characterId, text);
+
+      if (state === "loading" && activeKey === key) {
+        return;
+      }
+
+      if (activeKey === key) {
+        if (state === "playing") {
+          pause();
+          return;
+        }
+        if (state === "paused") {
+          await resume();
+          return;
+        }
+      }
+
+      await playKey(key, characterId, text);
+    },
+    [activeKey, pause, playKey, resume, state]
   );
 
   const restart = useCallback(
     async (characterId: string, text: string) => {
-      stop();
-      // Небольшая задержка чтобы stop() успел очистить состояние
-      await new Promise(r => setTimeout(r, 50));
-      setState("loading");
-      try {
-        const key = cacheKey(characterId, text);
-        let blob = browserCache.get(key);
-        if (!blob) {
-          blob = await apiClient.synthesizeSpeech(characterId, text);
-          browserCache.set(key, blob);
-        }
-        const url = URL.createObjectURL(blob);
-        objectUrlRef.current = url;
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        audio.onended = () => stop();
-        audio.onerror = () => { stop(); setState("error"); };
-        setState("playing");
-        await audio.play();
-      } catch {
-        stop();
-        setState("error");
-        setTimeout(() => setState("idle"), 3000);
-      }
+      const key = cacheKey(characterId, text);
+      await playKey(key, characterId, text);
     },
-    [stop]
+    [playKey]
   );
 
-  return { state, speak, stop, pause, resume, restart, isSpeaking: state === "playing" };
+  useEffect(() => {
+    return () => {
+      clearErrorTimer();
+      cleanupAudio();
+    };
+  }, [cleanupAudio, clearErrorTimer]);
+
+  return {
+    state,
+    activeKey,
+    speak,
+    stop,
+    pause,
+    resume,
+    restart,
+    isSpeaking: state === "playing",
+  };
 }
