@@ -38,8 +38,8 @@ export function CharacterSidebar({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold leading-[1.15] text-[var(--theme-text)]">
-              <span className="block">Диалоги с</span>
-              <span className="block">историей</span>
+              <span className="block">Диалоги</span>
+              <span className="block">с историей</span>
             </h1>
             <p className="mt-2 text-[11px] uppercase tracking-[0.35em] text-[var(--theme-muted)]">
               Исторические эпохи России
