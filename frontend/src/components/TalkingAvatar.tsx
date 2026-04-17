@@ -1,15 +1,12 @@
 /**
- * TalkingAvatar — анимированный аватар персонажа.
+ * TalkingAvatar - animated character avatar.
  *
- * Логика:
- *   - isSpeaking=false → показываем {id}_idle.png
- *   - isSpeaking=true  → циклично переключаем idle↔speak каждые 150мс
+ * Logic:
+ *   - isSpeaking=false -> show {id}_idle.png
+ *   - isSpeaking=true  -> rapidly switch idle <-> speak
  *
- * Если картинки ещё не загружены (файлы не добавлены) —
- * показываем красивый fallback с инициалами, идентичный текущим аватарам.
- *
- * Картинки ищутся в /avatars/{id}_idle.png и /avatars/{id}_speak.png
- * (папка frontend/public/avatars/).
+ * If the avatar frames are missing, show a fallback with initials.
+ * Images are loaded from frontend/public/avatars/.
  */
 import { useEffect, useRef, useState } from "react";
 
@@ -17,7 +14,7 @@ interface TalkingAvatarProps {
   characterId: string;
   characterName: string;
   isSpeaking: boolean;
-  size?: "sm" | "md" | "lg";   // sm=32px, md=40px, lg=64px
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
@@ -28,15 +25,25 @@ const SIZE_CLASS = {
 };
 
 const INITIALS: Record<string, string> = {
-  rurik: "Р", vladimir: "Вл", yaroslav: "Я",
-  ivan3: "И³", ivan4: "И⁴",
-  peter1: "П", catherine2: "Е", nicholas2: "Н",
-  lenin: "Л", stalin: "С", khrushchev: "Х",
-  brezhnev: "Б", gorbachev: "Г",
+  rurik: "Р",
+  vladimir: "Вл",
+  yaroslav: "Я",
+  ivan3: "ИIII",
+  ivan4: "ИIV",
+  peter1: "П",
+  catherine2: "Е",
+  nicholas2: "Н",
+  lenin: "Л",
+  stalin: "С",
+  khrushchev: "Х",
+  brezhnev: "Б",
+  gorbachev: "Г",
 };
 
+const AVATAR_BASE = `${import.meta.env.BASE_URL}avatars/`.replace(/([^:]\/)\/+/g, "$1");
+
 function avatarPath(id: string, state: "idle" | "speak"): string {
-  return `/avatars/${id}_${state}.png`;
+  return `${AVATAR_BASE}${id}_${state}.png`;
 }
 
 export function TalkingAvatar({
@@ -46,38 +53,70 @@ export function TalkingAvatar({
   size = "md",
   className = "",
 }: TalkingAvatarProps) {
-  const [frame, setFrame]       = useState<"idle" | "speak">("idle");
-  const [hasImage, setHasImage] = useState<boolean | null>(null); // null=загружаем
-  const intervalRef             = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [frame, setFrame] = useState<"idle" | "speak">("idle");
+  const [hasImage, setHasImage] = useState<boolean | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Проверяем наличие картинки один раз при монтировании
   useEffect(() => {
-    const img = new Image();
-    img.onload  = () => setHasImage(true);
-    img.onerror = () => setHasImage(false);
-    img.src = avatarPath(characterId, "idle");
+    let cancelled = false;
+
+    setHasImage(null);
+    setFrame("idle");
+
+    const preload = (src: string) =>
+      new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to load ${src}`));
+        img.src = src;
+      });
+
+    void Promise.all([
+      preload(avatarPath(characterId, "idle")),
+      preload(avatarPath(characterId, "speak")),
+    ])
+      .then(() => {
+        if (!cancelled) {
+          setHasImage(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHasImage(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [characterId]);
 
-  // Анимация: запускаем интервал когда говорит, останавливаем когда нет
   useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
     if (isSpeaking && hasImage) {
       intervalRef.current = setInterval(() => {
-        setFrame(f => f === "idle" ? "speak" : "idle");
-      }, 160); // 160мс — ~6 кадров в секунду, органично
+        setFrame((current) => (current === "idle" ? "speak" : "idle"));
+      }, 160);
     } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
       setFrame("idle");
     }
+
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
   }, [isSpeaking, hasImage]);
 
   const sizeClass = SIZE_CLASS[size];
-  const initial   = INITIALS[characterId] ?? characterName[0];
+  const initial = INITIALS[characterId] ?? characterName[0] ?? "?";
 
-  // Fallback — инициалы (пока нет картинок)
-  if (hasImage === false || hasImage === null) {
+  if (hasImage !== true) {
     return (
       <div
         className={`
@@ -95,7 +134,6 @@ export function TalkingAvatar({
     );
   }
 
-  // Аватар с картинкой
   return (
     <div
       className={`
