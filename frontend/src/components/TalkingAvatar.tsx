@@ -22,6 +22,7 @@ const INITIALS: Record<string, string> = {
   ivan4: "ИIV",
   peter1: "П",
   catherine2: "Е",
+  alexander2: "АII",
   nicholas2: "Н",
   lenin: "Л",
   stalin: "С",
@@ -127,9 +128,7 @@ export function TalkingAvatar({
           ${className}
         `}
       >
-        <span className="font-display font-bold text-soviet-beige">
-          {initial}
-        </span>
+        <span className="font-display font-bold text-soviet-beige">{initial}</span>
       </div>
     );
   }
