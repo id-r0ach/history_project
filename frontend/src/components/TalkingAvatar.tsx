@@ -30,10 +30,16 @@ const INITIALS: Record<string, string> = {
   gorbachev: "Г",
 };
 
+const AVATAR_EXTENSIONS = ["JPG", "jpg", "JPEG", "jpeg", "png", "PNG"];
+
 function publicAsset(path: string): string {
   const base = import.meta.env.BASE_URL || "/";
   const normalizedBase = base.endsWith("/") ? base : `${base}/`;
   return `${normalizedBase}${path}`.replace(/([^:]\/)\/+/g, "$1");
+}
+
+function buildAvatarSources(characterId: string, state: "idle" | "speak"): string[] {
+  return AVATAR_EXTENSIONS.map((ext) => publicAsset(`avatars/${characterId}_${state}.${ext}`));
 }
 
 export function TalkingAvatar({
@@ -43,14 +49,18 @@ export function TalkingAvatar({
   size = "md",
   className = "",
 }: TalkingAvatarProps) {
+  const [idleIndex, setIdleIndex] = useState(0);
+  const [speakIndex, setSpeakIndex] = useState(0);
   const [idleOk, setIdleOk] = useState(true);
   const [speakOk, setSpeakOk] = useState(true);
   const [frame, setFrame] = useState<"idle" | "speak">("idle");
 
-  const idleSrc = useMemo(() => publicAsset(`avatars/${characterId}_idle.png`), [characterId]);
-  const speakSrc = useMemo(() => publicAsset(`avatars/${characterId}_speak.png`), [characterId]);
+  const idleSources = useMemo(() => buildAvatarSources(characterId, "idle"), [characterId]);
+  const speakSources = useMemo(() => buildAvatarSources(characterId, "speak"), [characterId]);
 
   useEffect(() => {
+    setIdleIndex(0);
+    setSpeakIndex(0);
     setIdleOk(true);
     setSpeakOk(true);
     setFrame("idle");
@@ -71,7 +81,34 @@ export function TalkingAvatar({
 
   const sizeClass = SIZE_CLASS[size];
   const initial = INITIALS[characterId] ?? characterName[0] ?? "?";
-  const canRenderImages = Boolean(characterId) && idleOk && speakOk;
+  const canRenderImages =
+    Boolean(characterId) &&
+    idleOk &&
+    speakOk &&
+    idleIndex < idleSources.length &&
+    speakIndex < speakSources.length;
+
+  const handleIdleError = () => {
+    setIdleIndex((current) => {
+      const next = current + 1;
+      if (next >= idleSources.length) {
+        setIdleOk(false);
+        return current;
+      }
+      return next;
+    });
+  };
+
+  const handleSpeakError = () => {
+    setSpeakIndex((current) => {
+      const next = current + 1;
+      if (next >= speakSources.length) {
+        setSpeakOk(false);
+        return current;
+      }
+      return next;
+    });
+  };
 
   if (!canRenderImages) {
     return (
@@ -99,19 +136,21 @@ export function TalkingAvatar({
       `}
     >
       <img
-        src={idleSrc}
+        key={idleSources[idleIndex]}
+        src={idleSources[idleIndex]}
         alt={characterName}
         draggable={false}
-        onError={() => setIdleOk(false)}
+        onError={handleIdleError}
         className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-75 ${
           frame === "idle" || !isSpeaking ? "opacity-100" : "opacity-0"
         }`}
       />
       <img
-        src={speakSrc}
+        key={speakSources[speakIndex]}
+        src={speakSources[speakIndex]}
         alt={characterName}
         draggable={false}
-        onError={() => setSpeakOk(false)}
+        onError={handleSpeakError}
         className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-75 ${
           frame === "speak" && isSpeaking ? "opacity-100" : "opacity-0"
         }`}
