@@ -34,6 +34,7 @@
     --theme-panel: rgba(38, 26, 20, 0.8);
     --theme-panel-strong: rgba(49, 32, 24, 0.94);
     --theme-badge: rgba(255, 255, 255, 0.05);
+    --theme-badge-text: #f4ecde;
     --theme-accent: #cd0402;
     --theme-accent-2: #ab894b;
     --theme-accent-soft: rgba(205, 4, 2, 0.32);
@@ -73,6 +74,7 @@
     --theme-panel: rgba(48, 29, 24, 0.82);
     --theme-panel-strong: rgba(60, 34, 27, 0.96);
     --theme-badge: rgba(205, 4, 2, 0.12);
+    --theme-badge-text: #d8b77e;
     --theme-accent: #cd0402;
     --theme-accent-2: #ab894b;
     --theme-accent-soft: rgba(205, 4, 2, 0.34);
@@ -89,6 +91,7 @@
     --theme-panel: rgba(25, 25, 25, 0.84);
     --theme-panel-strong: rgba(35, 35, 35, 0.97);
     --theme-badge: rgba(254, 202, 53, 0.1);
+    --theme-badge-text: #ffe49a;
     --theme-accent: #feca35;
     --theme-accent-2: #fff1b0;
     --theme-accent-soft: rgba(254, 202, 53, 0.32);
@@ -105,6 +108,7 @@
     --theme-panel: rgba(50, 34, 18, 0.84);
     --theme-panel-strong: rgba(61, 41, 20, 0.96);
     --theme-badge: rgba(184, 116, 0, 0.14);
+    --theme-badge-text: #ffd27a;
     --theme-accent: #b87400;
     --theme-accent-2: #261a0c;
     --theme-accent-soft: rgba(184, 116, 0, 0.35);
@@ -121,6 +125,7 @@
     --theme-panel: rgba(66, 34, 24, 0.82);
     --theme-panel-strong: rgba(79, 38, 27, 0.95);
     --theme-badge: rgba(235, 171, 38, 0.12);
+    --theme-badge-text: #ffd27d;
     --theme-accent: #ebab26;
     --theme-accent-2: #803212;
     --theme-accent-soft: rgba(235, 171, 38, 0.34);

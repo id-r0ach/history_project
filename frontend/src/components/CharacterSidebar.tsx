@@ -32,11 +32,16 @@ export function CharacterSidebar({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_35%),linear-gradient(180deg,transparent,rgba(0,0,0,0.24))]" />
 
       <div className="relative border-b border-white/10 px-6 py-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-[var(--theme-text)]">Диалоги с историей</h1>
-          <p className="mt-2 text-[11px] uppercase tracking-[0.35em] text-[var(--theme-muted)]">
-            Исторические эпохи России
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--theme-accent-soft)] bg-[var(--theme-badge)] shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+            <img src="/favicon.png" alt="Логотип сайта" className="h-full w-full object-cover" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-[var(--theme-text)]">Диалоги с историей</h1>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.35em] text-[var(--theme-muted)]">
+              Исторические эпохи России
+            </p>
+          </div>
         </div>
       </div>
 
@@ -60,7 +65,9 @@ export function CharacterSidebar({
             return (
               <section key={era} className="mt-5">
                 <div className="flex items-center gap-3 px-5 pb-2">
-                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${theme.badgeClass}`}>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] shadow-[0_8px_18px_rgba(0,0,0,0.12)] ${theme.badgeClass}`}
+                  >
                     {era}
                   </span>
                   <div className={`h-px flex-1 bg-gradient-to-r ${theme.dividerClass}`} />
