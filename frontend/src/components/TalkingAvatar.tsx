@@ -9,9 +9,9 @@ interface TalkingAvatarProps {
 }
 
 const SIZE_CLASS = {
-  sm: "h-8 w-8 text-sm",
-  md: "h-10 w-10 text-base",
-  lg: "h-16 w-16 text-2xl",
+  sm: "h-10 w-10 text-base",
+  md: "h-14 w-14 text-lg",
+  lg: "h-20 w-20 text-3xl",
 };
 
 const INITIALS: Record<string, string> = {
