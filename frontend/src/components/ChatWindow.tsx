@@ -55,7 +55,7 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
   const [error, setError] = useState<string | null>(null);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
 
-  const { state: ttsState, speak, restart, stop, isSpeaking } = useTTS();
+  const { state: ttsState, speak, restart, stop } = useTTS();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
