@@ -68,6 +68,27 @@ function getStarterQuestions(characterId: string): string[] {
   return map[characterId] ?? [];
 }
 
+function getQuestionPrompt(characterId: string): string {
+  const map: Record<string, string> = {
+    lenin: "Задайте вопрос Владимиру Ленину",
+    stalin: "Задайте вопрос Иосифу Сталину",
+    khrushchev: "Задайте вопрос Никите Хрущёву",
+    brezhnev: "Задайте вопрос Леониду Брежневу",
+    gorbachev: "Задайте вопрос Михаилу Горбачёву",
+    peter1: "Задайте вопрос Петру I",
+    catherine2: "Задайте вопрос Екатерине II",
+    alexander2: "Задайте вопрос Александру II",
+    nicholas2: "Задайте вопрос Николаю II",
+    ivan3: "Задайте вопрос Ивану III",
+    ivan4: "Задайте вопрос Ивану Грозному",
+    rurik: "Задайте вопрос Рюрику",
+    vladimir: "Задайте вопрос Владимиру Святославовичу",
+    yaroslav: "Задайте вопрос Ярославу Мудрому",
+  };
+
+  return map[characterId] ?? "Задайте вопрос персонажу";
+}
+
 export function ChatWindow({ characterId, character, onMessageSent }: ChatWindowProps) {
   const [sessionId, setSessionId] = useState<string>(() => getOrCreateSessionId(characterId));
   const [messages, setMessages] = useState<Message[]>([]);
@@ -361,7 +382,7 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
               isLoadingHistory
                 ? "Загружаем историю..."
                 : character
-                  ? `Задайте вопрос ${character.name}...`
+                  ? getQuestionPrompt(character.id)
                   : "Выберите персонажа для начала диалога..."
             }
             disabled={!character || isLoading || isLoadingHistory}
