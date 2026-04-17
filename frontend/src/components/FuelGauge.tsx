@@ -6,33 +6,39 @@ interface FuelGaugeProps {
   onOpenSettings: () => void;
 }
 
-function getLevel(pct: number): "critical" | "warning" | "ok" {
-  if (pct < 10) return "critical";
-  if (pct < 50) return "warning";
+function getLevel(percent: number): "critical" | "warning" | "ok" {
+  if (percent < 10) return "critical";
+  if (percent < 50) return "warning";
   return "ok";
 }
 
-const BAR_COLOR   = { critical: "bg-red-500",    warning: "bg-yellow-500",  ok: "bg-green-500" };
-const TEXT_COLOR  = { critical: "text-red-400",  warning: "text-yellow-400", ok: "text-green-400" };
+const BAR_COLOR = {
+  critical: "bg-red-500",
+  warning: "bg-yellow-500",
+  ok: "bg-green-500",
+};
 
-function MiniBar({ b, label }: { b: ServiceBalance; label: string }) {
-  const pct   = Math.max(0, Math.min(100, b.percent));
-  const level = getLevel(pct);
+const TEXT_COLOR = {
+  critical: "text-red-400",
+  warning: "text-yellow-400",
+  ok: "text-green-400",
+};
+
+function MiniBar({ balance, label }: { balance: ServiceBalance; label: string }) {
+  const percent = Math.max(0, Math.min(100, balance.percent));
+  const level = getLevel(percent);
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-[9px] font-body uppercase tracking-wider text-soviet-gray-light/70">
-          {label}
-        </span>
-        <span className={`text-[9px] font-body font-semibold tabular-nums ${TEXT_COLOR[level]} ${level === "critical" ? "animate-pulse" : ""}`}>
-          {b.current.toFixed(2)} ₽
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--theme-muted)]">{label}</span>
+        <span className={`text-[10px] font-semibold tabular-nums ${TEXT_COLOR[level]} ${level === "critical" ? "animate-pulse" : ""}`}>
+          {balance.current.toFixed(2)} ₽
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-soviet-dark overflow-hidden border border-soviet-gray/15">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${BAR_COLOR[level]}`}
-          style={{ width: `${pct}%` }}
-        />
+
+      <div className="h-2 rounded-full border border-white/10 bg-black/20">
+        <div className={`h-full rounded-full transition-all duration-700 ${BAR_COLOR[level]}`} style={{ width: `${percent}%` }} />
       </div>
     </div>
   );
@@ -40,30 +46,27 @@ function MiniBar({ b, label }: { b: ServiceBalance; label: string }) {
 
 export function FuelGauge({ balance, isLoading, onOpenSettings }: FuelGaugeProps) {
   return (
-    <div className="px-4 py-3 border-t border-soviet-gray/20">
-      {/* Заголовок */}
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[9px] font-body tracking-widest uppercase text-soviet-gray-light/60">
-          Топливо системы
-        </span>
+    <div className="border-t border-white/10 px-4 py-4">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-[0.28em] text-[var(--theme-muted)]">Топливо системы</span>
         <button
           onClick={onOpenSettings}
           title="Настройки"
-          className="text-soviet-gray-light/50 hover:text-soviet-beige transition-colors duration-150 text-xs px-1"
+          className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)]"
         >
-          ⚙︎
+          ⚙
         </button>
       </div>
 
       {isLoading || !balance ? (
         <div className="space-y-2">
-          <div className="h-1.5 rounded-full bg-soviet-dark-3 animate-pulse" />
-          <div className="h-1.5 rounded-full bg-soviet-dark-3 animate-pulse" />
+          <div className="h-2 animate-pulse rounded-full bg-white/[0.06]" />
+          <div className="h-2 animate-pulse rounded-full bg-white/[0.06]" />
         </div>
       ) : (
-        <div className="space-y-2">
-          <MiniBar b={balance.llm} label="LLM" />
-          <MiniBar b={balance.tts} label="TTS" />
+        <div className="space-y-3">
+          <MiniBar balance={balance.llm} label="LLM" />
+          <MiniBar balance={balance.tts} label="TTS" />
         </div>
       )}
     </div>

@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { Loader2, Pause, Play, RotateCcw } from "lucide-react";
 
-import type { CharacterInfo, Message } from "../types";
 import type { TTSState } from "../hooks/useTTS";
+import { getThemeByEra } from "../theme";
+import type { CharacterInfo, Message } from "../types";
 import { TalkingAvatar } from "./TalkingAvatar";
 
 interface MessageBubbleProps {
@@ -29,7 +30,7 @@ function renderMarkdown(text: string): ReactNode {
       const nodes = parts.map((part, partIndex) => {
         if (/^\*\*[^*]+\*\*$/.test(part)) {
           return (
-            <strong key={partIndex} className="font-semibold text-soviet-cream">
+            <strong key={partIndex} className="font-semibold text-[var(--theme-text)]">
               {part.slice(2, -2)}
             </strong>
           );
@@ -37,7 +38,7 @@ function renderMarkdown(text: string): ReactNode {
 
         if (/^\*[^*]+\*$/.test(part)) {
           return (
-            <em key={partIndex} className="italic text-soviet-beige/90">
+            <em key={partIndex} className="italic text-[var(--theme-text-soft)]">
               {part.slice(1, -1)}
             </em>
           );
@@ -70,21 +71,23 @@ export function MessageBubble({
   onSpeak,
   onRestart,
 }: MessageBubbleProps) {
+  const theme = getThemeByEra(character?.era);
   const isUser = message.role === "user";
 
   if (isUser) {
     return (
-      <div className="group flex justify-end gap-3">
+      <div className="group flex justify-end gap-4">
         <div className="flex max-w-[72%] flex-col items-end">
-          <div className="rounded-2xl rounded-tr-sm bg-soviet-red/80 px-4 py-3 text-sm font-body leading-relaxed text-soviet-cream shadow-lg">
+          <div className="rounded-[24px] rounded-tr-md border border-[var(--theme-accent-soft)] bg-[var(--theme-accent)] px-5 py-4 text-sm leading-relaxed text-[var(--theme-send-text)] shadow-[0_18px_35px_rgba(0,0,0,0.18)]">
             {message.content}
           </div>
-          <span className="mt-1.5 text-xs text-soviet-gray-light opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="mt-1.5 text-xs text-[var(--theme-muted)] opacity-0 transition-opacity group-hover:opacity-100">
             {formatTime(message.timestamp)}
           </span>
         </div>
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-soviet-gray/60 bg-soviet-gray/40">
-          <span className="text-xs font-body font-medium text-soviet-beige">Вы</span>
+
+        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-xs font-semibold text-[var(--theme-text-soft)]">
+          Вы
         </div>
       </div>
     );
@@ -96,7 +99,7 @@ export function MessageBubble({
   const isError = isSpeaking && ttsState === "error";
 
   return (
-    <div className="group flex gap-3">
+    <div className="group flex gap-4">
       <div className="mt-0.5 shrink-0">
         <TalkingAvatar
           characterId={character?.id ?? ""}
@@ -106,19 +109,24 @@ export function MessageBubble({
         />
       </div>
 
-      <div className="flex max-w-[72%] flex-col items-start">
+      <div className="flex max-w-[78%] flex-col items-start">
         {character && (
-          <span className="mb-1 ml-1 text-xs font-body font-medium text-soviet-red-light">
-            {character.name}
-          </span>
+          <div className="mb-2 ml-1 flex items-center gap-2">
+            <span className={`text-xs font-semibold uppercase tracking-[0.22em] ${theme.accentClass}`}>
+              {character.name}
+            </span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--theme-muted)]">
+              {character.era}
+            </span>
+          </div>
         )}
 
-        <div className="rounded-2xl rounded-tl-sm border border-soviet-gray/20 bg-soviet-dark-3 px-4 py-3 text-sm font-body leading-relaxed text-soviet-beige shadow-md">
+        <div className="rounded-[26px] rounded-tl-md border border-white/10 bg-[var(--theme-panel)]/88 px-5 py-4 text-sm leading-relaxed text-[var(--theme-text-soft)] shadow-[0_16px_30px_rgba(0,0,0,0.16)] backdrop-blur-md">
           {renderMarkdown(message.content)}
         </div>
 
-        <div className="mt-1.5 ml-1 flex items-center gap-2">
-          <span className="text-xs text-soviet-gray-light opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="mt-2 ml-1 flex items-center gap-2">
+          <span className="text-xs text-[var(--theme-muted)] opacity-0 transition-opacity group-hover:opacity-100">
             {formatTime(message.timestamp)}
           </span>
 
@@ -127,30 +135,29 @@ export function MessageBubble({
               <button
                 onClick={onSpeak}
                 title={isPaused ? "Продолжить" : "Слушать"}
-                className={`
-                  flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-body transition-all duration-150
-                  ${
-                    isPlaying
-                      ? "bg-soviet-red/10 text-soviet-red-light border-soviet-red/40 hover:bg-soviet-red/20"
-                      : isPaused
-                        ? "bg-soviet-red/10 text-soviet-red-light border-soviet-red/40 hover:bg-soviet-red/20"
-                        : isError
-                          ? "border-red-800/40 bg-red-950/30 text-red-400"
-                          : "border-soviet-gray/20 text-soviet-gray-light hover:border-soviet-gray/40 hover:bg-soviet-dark hover:text-soviet-beige"
-                  }
-                `}
+                className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-all duration-150 ${
+                  isPlaying || isPaused
+                    ? "border-[var(--theme-accent-soft)] bg-[var(--theme-badge)] text-[var(--theme-accent)]"
+                    : isError
+                      ? "border-red-800/40 bg-red-950/30 text-red-400"
+                      : "border-white/10 bg-white/[0.03] text-[var(--theme-muted)] hover:border-[var(--theme-accent-soft)] hover:text-[var(--theme-text)]"
+                }`}
               >
-                {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                <span>
-                  {isLoading ? "..." : isPlaying ? "Пауза" : isPaused ? "Играть" : isError ? "Ошибка" : "Слушать"}
-                </span>
+                {isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : isPlaying ? (
+                  <Pause className="h-3 w-3" />
+                ) : (
+                  <Play className="h-3 w-3" />
+                )}
+                <span>{isLoading ? "..." : isPlaying ? "Пауза" : isPaused ? "Играть" : isError ? "Ошибка" : "Слушать"}</span>
               </button>
 
               {(isPlaying || isPaused) && (
                 <button
                   onClick={onRestart}
                   title="Сначала"
-                  className="flex items-center gap-1 rounded-lg border border-soviet-gray/20 px-2 py-0.5 text-xs font-body text-soviet-gray-light transition-all duration-150 hover:border-soviet-gray/40 hover:bg-soviet-dark hover:text-soviet-beige"
+                  className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-[var(--theme-muted)] transition-all duration-150 hover:border-[var(--theme-accent-soft)] hover:text-[var(--theme-text)]"
                 >
                   <RotateCcw className="h-3 w-3" />
                   <span>Сначала</span>

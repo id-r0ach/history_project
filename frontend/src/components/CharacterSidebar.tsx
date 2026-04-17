@@ -1,4 +1,5 @@
 import type { BalanceInfo, CharacterInfo } from "../types";
+import { ERA_ORDER, getThemeByEra } from "../theme";
 import { FuelGauge } from "./FuelGauge";
 import { TalkingAvatar } from "./TalkingAvatar";
 
@@ -11,22 +12,6 @@ interface CharacterSidebarProps {
   isBalanceLoading: boolean;
   onOpenSettings: () => void;
 }
-
-const ERA_COLORS: Record<string, string> = {
-  "Рюриковичи": "border-amber-600",
-  "Московское царство": "border-orange-700",
-  "Романовы": "border-yellow-600",
-  "СССР": "border-soviet-red",
-};
-
-const ERA_LABEL_COLORS: Record<string, string> = {
-  "Рюриковичи": "text-amber-500/70",
-  "Московское царство": "text-orange-500/70",
-  "Романовы": "text-yellow-500/70",
-  "СССР": "text-soviet-red-light/70",
-};
-
-const ERA_ORDER = ["Рюриковичи", "Московское царство", "Романовы", "СССР"];
 
 export function CharacterSidebar({
   characters,
@@ -43,28 +28,31 @@ export function CharacterSidebar({
   }, {});
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-r border-soviet-gray/30 bg-soviet-dark">
-      <div className="border-b border-soviet-gray/30 px-6 py-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-soviet-red rotate-45">
-            <span className="-rotate-45 font-display text-sm font-bold text-soviet-cream">☆</span>
+    <aside className="relative flex h-full w-80 shrink-0 flex-col border-r border-white/10 bg-[var(--theme-sidebar)]/95 backdrop-blur-xl">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_35%),linear-gradient(180deg,transparent,rgba(0,0,0,0.24))]" />
+
+      <div className="relative border-b border-white/10 px-6 py-6">
+        <div className="flex items-center gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--theme-accent-soft)] bg-[var(--theme-badge)] text-lg text-[var(--theme-accent)] shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+            ✦
           </div>
           <div>
-            <h1 className="font-display text-base font-bold leading-tight tracking-wide text-soviet-cream">
-              История России
-            </h1>
-            <p className="mt-0.5 font-body text-xs uppercase tracking-widest text-soviet-gray-light">
-              Диалоги с историей
+            <h1 className="font-display text-xl font-bold text-[var(--theme-text)]">История России</h1>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.35em] text-[var(--theme-muted)]">
+              Диалоги с эпохами
             </p>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto pb-4 scrollbar-thin">
+      <nav className="relative flex-1 overflow-y-auto pb-4 pt-2 scrollbar-thin">
         {isLoading ? (
           <div className="space-y-3 px-3 pt-4">
             {[1, 2, 3, 4, 5].map((item) => (
-              <div key={item} className="h-20 animate-pulse rounded-xl bg-soviet-dark-3" />
+              <div
+                key={item}
+                className="h-20 animate-pulse rounded-2xl border border-white/5 bg-[var(--theme-panel)]/60"
+              />
             ))}
           </div>
         ) : (
@@ -72,70 +60,71 @@ export function CharacterSidebar({
             const group = grouped[era];
             if (!group?.length) return null;
 
-            const borderColor = ERA_COLORS[era] ?? "border-soviet-gray";
-            const labelColor = ERA_LABEL_COLORS[era] ?? "text-soviet-gray-light";
+            const theme = getThemeByEra(era);
 
             return (
-              <div key={era} className="mt-4">
-                <div className="flex items-center gap-2 px-5 pb-1.5">
-                  <span className={`text-[10px] font-body font-semibold uppercase tracking-widest ${labelColor}`}>
+              <section key={era} className="mt-5">
+                <div className="flex items-center gap-3 px-5 pb-2">
+                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${theme.badgeClass}`}>
                     {era}
                   </span>
-                  <div className="h-px flex-1 bg-soviet-gray/15" />
+                  <div className={`h-px flex-1 bg-gradient-to-r ${theme.dividerClass}`} />
                 </div>
 
-                <div className="space-y-1 px-3">
-                  {group.map((char) => {
-                    const isSelected = char.id === selectedId;
+                <div className="space-y-2 px-3">
+                  {group.map((character) => {
+                    const isSelected = character.id === selectedId;
 
                     return (
                       <button
-                        key={char.id}
-                        onClick={() => onSelect(char.id)}
-                        className={`group flex w-full items-center gap-4 rounded-xl border px-3 py-3 text-left transition-all duration-150 ${
+                        key={character.id}
+                        onClick={() => onSelect(character.id)}
+                        className={`group flex w-full items-center gap-4 overflow-hidden rounded-2xl border px-3 py-3 text-left transition-all duration-200 ${
                           isSelected
-                            ? "border-soviet-red/40 bg-soviet-red/20"
-                            : "border-transparent hover:border-soviet-gray/20 hover:bg-soviet-dark-3"
+                            ? "border-[var(--theme-accent-soft)] bg-[var(--theme-panel-strong)] shadow-[0_18px_35px_rgba(0,0,0,0.22)]"
+                            : "border-transparent bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.05]"
                         }`}
                       >
                         <TalkingAvatar
-                          characterId={char.id}
-                          characterName={char.name}
+                          characterId={character.id}
+                          characterName={character.name}
                           isSpeaking={false}
                           size="sm"
-                          className={isSelected ? borderColor : "border-soviet-gray/30"}
+                          className={isSelected ? "ring-2 ring-[var(--theme-accent-soft)] ring-offset-0" : ""}
                         />
 
                         <div className="min-w-0 flex-1">
                           <p
-                            className={`truncate font-body text-sm font-medium transition-colors ${
-                              isSelected
-                                ? "text-soviet-cream"
-                                : "text-soviet-beige/80 group-hover:text-soviet-cream"
+                            className={`truncate text-sm font-medium transition-colors ${
+                              isSelected ? "text-[var(--theme-text)]" : "text-[var(--theme-text-soft)] group-hover:text-[var(--theme-text)]"
                             }`}
                           >
-                            {char.name}
+                            {character.name}
                           </p>
-                          <p className="mt-0.5 truncate text-xs text-soviet-gray-light">{char.years}</p>
+                          <p className="mt-1 truncate text-xs tracking-[0.16em] text-[var(--theme-muted)]">
+                            {character.years}
+                          </p>
                         </div>
 
                         {isSelected && (
-                          <div className="ml-auto h-2 w-2 shrink-0 rounded-full bg-soviet-red-light" />
+                          <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--theme-accent)] shadow-[0_0_12px_var(--theme-accent)]" />
                         )}
                       </button>
                     );
                   })}
                 </div>
-              </div>
+              </section>
             );
           })
         )}
       </nav>
 
-      <FuelGauge balance={balance} isLoading={isBalanceLoading} onOpenSettings={onOpenSettings} />
+      <div className="relative">
+        <FuelGauge balance={balance} isLoading={isBalanceLoading} onOpenSettings={onOpenSettings} />
+      </div>
 
-      <div className="border-t border-soviet-gray/30 px-6 py-4">
-        <p className="text-center font-body text-xs leading-relaxed text-soviet-gray-light">
+      <div className="relative border-t border-white/10 px-6 py-4">
+        <p className="text-center text-xs leading-relaxed text-[var(--theme-muted)]">
           Исторические персонажи воссозданы с помощью AI.
           <br />
           Ответы могут быть неточными.

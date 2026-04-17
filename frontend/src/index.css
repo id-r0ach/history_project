@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   html,
   body,
   #root {
@@ -12,19 +16,129 @@
     padding: 0;
   }
 
+  body {
+    background: #140f0d;
+    color: #f2eadf;
+  }
+
   * {
     box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .theme-shell {
+    --theme-bg: #140f0d;
+    --theme-surface: #1a1412;
+    --theme-sidebar: rgba(18, 13, 12, 0.94);
+    --theme-panel: rgba(38, 26, 20, 0.8);
+    --theme-panel-strong: rgba(49, 32, 24, 0.94);
+    --theme-badge: rgba(255, 255, 255, 0.05);
+    --theme-accent: #cd0402;
+    --theme-accent-2: #ab894b;
+    --theme-accent-soft: rgba(205, 4, 2, 0.32);
+    --theme-text: #f4ecde;
+    --theme-text-soft: rgba(244, 236, 222, 0.82);
+    --theme-muted: rgba(244, 236, 222, 0.52);
+    --theme-send-text: #fff8ef;
+
+    position: relative;
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.07), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(0, 0, 0, 0.35), transparent 32%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent 40%),
+      var(--theme-bg);
+    transition:
+      background 280ms ease,
+      color 280ms ease;
+  }
+
+  .theme-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.3;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.65), transparent 85%);
+  }
+
+  .theme-ussr {
+    --theme-bg: #181312;
+    --theme-surface: #211816;
+    --theme-sidebar: rgba(26, 17, 16, 0.96);
+    --theme-panel: rgba(48, 29, 24, 0.82);
+    --theme-panel-strong: rgba(60, 34, 27, 0.96);
+    --theme-badge: rgba(205, 4, 2, 0.12);
+    --theme-accent: #cd0402;
+    --theme-accent-2: #ab894b;
+    --theme-accent-soft: rgba(205, 4, 2, 0.34);
+    --theme-text: #f5eee2;
+    --theme-text-soft: rgba(245, 238, 226, 0.84);
+    --theme-muted: rgba(245, 238, 226, 0.52);
+    --theme-send-text: #fff5ed;
+  }
+
+  .theme-romanovs {
+    --theme-bg: #0b0b0b;
+    --theme-surface: #101010;
+    --theme-sidebar: rgba(8, 8, 8, 0.97);
+    --theme-panel: rgba(25, 25, 25, 0.84);
+    --theme-panel-strong: rgba(35, 35, 35, 0.97);
+    --theme-badge: rgba(254, 202, 53, 0.1);
+    --theme-accent: #feca35;
+    --theme-accent-2: #fff1b0;
+    --theme-accent-soft: rgba(254, 202, 53, 0.32);
+    --theme-text: #fff8e4;
+    --theme-text-soft: rgba(255, 248, 228, 0.83);
+    --theme-muted: rgba(255, 248, 228, 0.5);
+    --theme-send-text: #201807;
+  }
+
+  .theme-tsardom {
+    --theme-bg: #1a130d;
+    --theme-surface: #21170e;
+    --theme-sidebar: rgba(24, 17, 11, 0.96);
+    --theme-panel: rgba(50, 34, 18, 0.84);
+    --theme-panel-strong: rgba(61, 41, 20, 0.96);
+    --theme-badge: rgba(184, 116, 0, 0.14);
+    --theme-accent: #b87400;
+    --theme-accent-2: #261a0c;
+    --theme-accent-soft: rgba(184, 116, 0, 0.35);
+    --theme-text: #f9ebd7;
+    --theme-text-soft: rgba(249, 235, 215, 0.82);
+    --theme-muted: rgba(249, 235, 215, 0.5);
+    --theme-send-text: #fff6e9;
+  }
+
+  .theme-rurikids {
+    --theme-bg: #1b110e;
+    --theme-surface: #251612;
+    --theme-sidebar: rgba(28, 17, 14, 0.96);
+    --theme-panel: rgba(66, 34, 24, 0.82);
+    --theme-panel-strong: rgba(79, 38, 27, 0.95);
+    --theme-badge: rgba(235, 171, 38, 0.12);
+    --theme-accent: #ebab26;
+    --theme-accent-2: #803212;
+    --theme-accent-soft: rgba(235, 171, 38, 0.34);
+    --theme-text: #f8efe2;
+    --theme-text-soft: rgba(248, 239, 226, 0.82);
+    --theme-muted: rgba(248, 239, 226, 0.5);
+    --theme-send-text: #2a1607;
   }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #3d3d3d transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
@@ -32,11 +146,11 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: #3d3d3d;
-    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.16);
+    border-radius: 9999px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: #6b6b6b;
+    background-color: rgba(255, 255, 255, 0.28);
   }
 }

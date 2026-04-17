@@ -1,14 +1,9 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { AlertCircle, Loader2, RotateCcw, Send } from "lucide-react";
 
-import type { CharacterInfo, Message } from "../types";
 import { apiClient } from "../services/api";
+import { getThemeByEra } from "../theme";
+import type { CharacterInfo, Message } from "../types";
 import { useTTS } from "../hooks/useTTS";
 import { MessageBubble } from "./MessageBubble";
 import { TalkingAvatar } from "./TalkingAvatar";
@@ -32,9 +27,9 @@ function getOrCreateSessionId(characterId: string): string {
   const newId =
     typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID()
-      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
           const r = (Math.random() * 16) | 0;
-          const v = c === "x" ? r : (r & 0x3) | 0x8;
+          const v = char === "x" ? r : (r & 0x3) | 0x8;
           return v.toString(16);
         });
 
@@ -44,6 +39,33 @@ function getOrCreateSessionId(characterId: string): string {
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function getStarterQuestions(characterId: string): string[] {
+  const map: Record<string, string[]> = {
+    khrushchev: [
+      "Расскажите о секретном докладе 1956 года",
+      "Что вы думаете о Карибском кризисе?",
+      "Как проходила оттепель?",
+    ],
+    stalin: [
+      "Как вы победили в Великой Отечественной войне?",
+      "Что такое социализм в одной стране?",
+      "Расскажите об индустриализации СССР",
+    ],
+    lenin: [
+      "Почему произошла революция 1917 года?",
+      "Что такое НЭП?",
+      "Расскажите о диктатуре пролетариата",
+    ],
+    ivan4: [
+      "Как вы создавали опричнину?",
+      "Почему вы приняли титул царя?",
+      "Расскажите о взятии Казани",
+    ],
+  };
+
+  return map[characterId] ?? [];
 }
 
 export function ChatWindow({ characterId, character, onMessageSent }: ChatWindowProps) {
@@ -60,27 +82,30 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const theme = getThemeByEra(character?.era);
+
   useEffect(() => {
-    const sid = getOrCreateSessionId(characterId);
+    const nextSessionId = getOrCreateSessionId(characterId);
 
     stop();
     setActiveMessageId(null);
-    setSessionId(sid);
+    setSessionId(nextSessionId);
     setMessages([]);
     setError(null);
     setInput("");
     setIsLoadingHistory(true);
 
     apiClient
-      .getHistory(sid)
+      .getHistory(nextSessionId)
       .then((data) => {
-        const loaded: Message[] = data.messages.map((message) => ({
+        const loadedMessages: Message[] = data.messages.map((message) => ({
           id: generateId(),
           role: message.role,
           content: message.content,
           timestamp: new Date(),
         }));
-        setMessages(loaded);
+
+        setMessages(loadedMessages);
       })
       .catch(() => {
         setMessages([]);
@@ -95,10 +120,10 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
   }, [messages, isLoading]);
 
   useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
   }, [input]);
 
   useEffect(() => {
@@ -114,12 +139,12 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
     try {
       await apiClient.deleteSession(sessionId);
     } catch {
-      // ignore missing session on backend
+      // Ignore missing session on backend.
     }
 
     localStorage.removeItem(storageKey(characterId));
-    const newSessionId = getOrCreateSessionId(characterId);
-    setSessionId(newSessionId);
+    const nextSessionId = getOrCreateSessionId(characterId);
+    setSessionId(nextSessionId);
     setMessages([]);
     setError(null);
     setInput("");
@@ -161,8 +186,8 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
       setMessages((prev) => [...prev, assistantMessage]);
       onMessageSent?.();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Неизвестная ошибка";
-      setError(message);
+      const detail = err instanceof Error ? err.message : "Неизвестная ошибка";
+      setError(detail);
     } finally {
       setIsLoading(false);
       textareaRef.current?.focus();
@@ -187,9 +212,9 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
     [character, restart]
   );
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
       void sendMessage();
     }
   };
@@ -198,11 +223,14 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex h-full flex-col bg-soviet-dark-2">
+    <div className="relative flex h-full flex-col bg-[var(--theme-surface)] text-[var(--theme-text)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_28%),linear-gradient(180deg,transparent,rgba(0,0,0,0.18))]" />
+
       {character && (
-        <div className="shrink-0 border-b border-soviet-gray/30 bg-soviet-dark px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="relative shrink-0 border-b border-white/10 bg-[var(--theme-panel)]/85 px-6 py-5 backdrop-blur-xl">
+          <div className="absolute inset-x-6 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/60 to-transparent" />
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
               <div className="relative">
                 <TalkingAvatar
                   characterId={character.id}
@@ -210,13 +238,24 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
                   isSpeaking={false}
                   size="md"
                 />
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-soviet-dark bg-green-500" />
+                <span className="absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-[var(--theme-accent-soft)] bg-[var(--theme-badge)] px-1 text-[10px] text-[var(--theme-accent)]">
+                  {theme.crest}
+                </span>
               </div>
-              <div>
-                <h2 className="font-display text-base font-semibold text-soviet-cream">
+
+              <div className="min-w-0">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${theme.badgeClass}`}>
+                    {character.era}
+                  </span>
+                  <span className="text-[11px] uppercase tracking-[0.25em] text-[var(--theme-muted)]">
+                    {theme.title}
+                  </span>
+                </div>
+                <h2 className="font-display text-[30px] font-semibold leading-none text-[var(--theme-text)]">
                   {character.name}
                 </h2>
-                <p className="text-xs font-body text-soviet-gray-light">
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--theme-text-soft)]">
                   {character.description}
                 </p>
               </div>
@@ -226,49 +265,57 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
               <button
                 onClick={() => void handleReset()}
                 title="Начать новый диалог"
-                className="flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-xs font-body text-soviet-gray-light transition-all duration-150 hover:border-soviet-gray/30 hover:bg-soviet-dark-3 hover:text-soviet-beige"
+                className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-[var(--theme-text-soft)] transition-all duration-150 hover:border-[var(--theme-accent-soft)] hover:bg-[var(--theme-badge)] hover:text-[var(--theme-text)]"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Новый диалог
+                <span className="flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  Новый диалог
+                </span>
               </button>
             )}
           </div>
+
+          <p className="mt-4 max-w-3xl text-xs uppercase tracking-[0.28em] text-[var(--theme-muted)]">
+            {theme.subtitle}
+          </p>
         </div>
       )}
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-6 py-6 scrollbar-thin">
+      <div className="relative flex-1 space-y-6 overflow-y-auto px-6 py-6 scrollbar-thin">
         {isLoadingHistory && (
-          <div className="flex h-full items-center justify-center gap-2 text-soviet-gray-light">
+          <div className="flex h-full items-center justify-center gap-2 text-[var(--theme-muted)]">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm font-body">Загружаем историю...</span>
+            <span className="text-sm">Загружаем историю...</span>
           </div>
         )}
 
         {!isLoadingHistory && !hasMessages && (
-          <div className="flex h-full flex-col items-center justify-center gap-4 pb-10 text-center">
+          <div className="flex h-full flex-col items-center justify-center gap-5 pb-12 text-center">
             <TalkingAvatar
               characterId={character?.id ?? ""}
               characterName={character?.name ?? "?"}
               isSpeaking={false}
               size="lg"
             />
-            <div>
-              <p className="font-display text-lg font-semibold text-soviet-cream">
+
+            <div className="max-w-2xl">
+              <p className="font-display text-3xl font-semibold text-[var(--theme-text)]">
                 {character?.name ?? "Выберите персонажа"}
               </p>
-              <p className="mt-1 max-w-xs text-sm font-body text-soviet-gray-light">
+              <p className="mt-3 text-sm leading-relaxed text-[var(--theme-text-soft)]">
                 {character
-                  ? `Начните диалог с ${character.name}. Задайте любой вопрос об эпохе.`
+                  ? `Перед вами ${theme.title.toLowerCase()}. Начните разговор с ${character.name} и задайте вопрос о событиях, власти, войнах или быте эпохи.`
                   : "Выберите исторического персонажа из списка слева."}
               </p>
             </div>
+
             {character && (
-              <div className="flex max-w-sm flex-wrap justify-center gap-2">
+              <div className="flex max-w-2xl flex-wrap justify-center gap-2.5">
                 {getStarterQuestions(character.id).map((question) => (
                   <button
                     key={question}
                     onClick={() => setInput(question)}
-                    className="rounded-full border border-soviet-gray/30 px-3 py-1.5 text-xs font-body text-soviet-beige/70 transition-all duration-150 hover:border-soviet-red/40 hover:bg-soviet-red/10 hover:text-soviet-beige"
+                    className="rounded-full border border-[var(--theme-accent-soft)] bg-[var(--theme-badge)] px-4 py-2 text-xs text-[var(--theme-text-soft)] transition-all duration-150 hover:border-[var(--theme-accent)] hover:text-[var(--theme-text)]"
                   >
                     {question}
                   </button>
@@ -294,7 +341,7 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
         {isLoading && <TypingIndicator character={character} />}
 
         {error && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-red-800/50 bg-red-950/40 px-4 py-3 text-sm font-body text-red-300">
+          <div className="flex items-start gap-3 rounded-2xl border border-red-800/40 bg-red-950/30 px-4 py-3 text-sm text-red-300">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
             <span>{error}</span>
           </div>
@@ -303,16 +350,12 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="shrink-0 border-t border-soviet-gray/30 bg-soviet-dark px-6 py-4">
-        <div
-          className={`flex items-end gap-3 rounded-2xl border bg-soviet-dark-3 px-4 py-3 transition-colors duration-150 ${
-            canSend || input.length > 0 ? "border-soviet-red/40" : "border-soviet-gray/30"
-          }`}
-        >
+      <div className="relative shrink-0 border-t border-white/10 bg-[var(--theme-panel)]/82 px-6 py-4 backdrop-blur-xl">
+        <div className="flex items-end gap-3 rounded-[28px] border border-white/10 bg-[var(--theme-panel-strong)]/90 px-4 py-3 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
               isLoadingHistory
@@ -323,52 +366,27 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
             }
             disabled={!character || isLoading || isLoadingHistory}
             rows={1}
-            className="min-h-[24px] flex-1 resize-none bg-transparent text-sm font-body leading-relaxed text-soviet-cream outline-none placeholder-soviet-gray-light disabled:opacity-50"
+            className="min-h-[24px] flex-1 resize-none bg-transparent text-sm leading-relaxed text-[var(--theme-text)] outline-none placeholder:text-[var(--theme-muted)] disabled:opacity-50"
           />
+
           <button
             onClick={() => void sendMessage()}
             disabled={!canSend}
             aria-label="Отправить сообщение"
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-150 ${
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-all duration-150 ${
               canSend
-                ? "bg-soviet-red text-white shadow-lg shadow-soviet-red/30 hover:bg-soviet-red-bright"
-                : "cursor-not-allowed bg-soviet-gray/20 text-soviet-gray-light"
+                ? "bg-[var(--theme-accent)] text-[var(--theme-send-text)] shadow-[0_14px_26px_rgba(0,0,0,0.25)] hover:scale-[1.02]"
+                : "cursor-not-allowed bg-white/10 text-[var(--theme-muted)]"
             }`}
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-4 w-4" />
           </button>
         </div>
-        <p className="mt-2 text-center text-xs font-body text-soviet-gray-light">
-          Enter - отправить · Shift+Enter - новая строка
+
+        <p className="mt-2 text-center text-xs text-[var(--theme-muted)]">
+          Enter — отправить · Shift+Enter — новая строка
         </p>
       </div>
     </div>
   );
-}
-
-function getStarterQuestions(characterId: string): string[] {
-  const map: Record<string, string[]> = {
-    khrushchev: [
-      "Расскажите о секретном докладе 1956 года",
-      "Что вы думаете о Карибском кризисе?",
-      "Как проходила «Оттепель»?",
-    ],
-    stalin: [
-      "Как вы победили в Великой Отечественной войне?",
-      "Что такое социализм в одной стране?",
-      "Расскажите об индустриализации СССР",
-    ],
-    lenin: [
-      "Почему произошла революция 1917 года?",
-      "Что такое НЭП?",
-      "Расскажите о диктатуре пролетариата",
-    ],
-    ivan4: [
-      "Как вы создавали опричнину?",
-      "Почему вы приняли титул царя?",
-      "Расскажите о взятии Казани",
-    ],
-  };
-
-  return map[characterId] ?? [];
 }

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+
+import { getThemeByEra } from "../theme";
 import type { CharacterInfo } from "../types";
 import { TalkingAvatar } from "./TalkingAvatar";
 
@@ -6,134 +8,97 @@ interface TypingIndicatorProps {
   character: CharacterInfo | null;
 }
 
-
-// Фразы по персонажам. Если персонаж не найден — используется DEFAULT
 const PHRASES: Record<string, string[]> = {
   lenin: [
-    "Анализирую классовые противоречия…",
-    "Изучаю труды Маркса и Энгельса…",
-    "Формулирую тезисы…",
-    "Обдумываю позицию партии…",
-    "Вспоминаю опыт революции…",
+    "Анализирую классовые противоречия...",
+    "Изучаю труды Маркса и Энгельса...",
+    "Формулирую тезисы...",
   ],
   stalin: [
-    "Взвешиваю каждое слово…",
-    "Обдумываю ответ…",
-    "Консультируюсь с историей…",
-    "Формирую позицию…",
-    "Вспоминаю…",
+    "Взвешиваю каждое слово...",
+    "Формирую позицию...",
+    "Обдумываю ответ...",
   ],
   khrushchev: [
-    "Вспоминаю, как это было…",
-    "Думаю, думаю…",
-    "Собираюсь с мыслями…",
-    "А вот помню такой случай…",
-    "Обдумываю ответ…",
+    "Вспоминаю, как это было...",
+    "Собираюсь с мыслями...",
+    "А вот помню такой случай...",
   ],
   brezhnev: [
-    "Обдумываю…",
-    "Вспоминаю годы застоя…",
-    "Взвешиваю ситуацию…",
-    "Консультируюсь с Политбюро…",
-    "Готовлю речь…",
+    "Готовлю речь...",
+    "Взвешиваю ситуацию...",
+    "Консультируюсь с Политбюро...",
   ],
   gorbachev: [
-    "Переосмысливаю…",
-    "Ищу новое мышление…",
-    "Взвешиваю все стороны…",
-    "Думаю о перестройке…",
-    "Анализирую…",
+    "Ищу новое мышление...",
+    "Анализирую...",
+    "Переосмысляю...",
   ],
   rurik: [
-    "Вспоминаю походы…",
-    "Думаю на языке предков…",
-    "Собираюсь с мыслями…",
-    "Вспоминаю дружину…",
-    "Обдумываю…",
+    "Вспоминаю походы...",
+    "Собираю дружину мыслей...",
+    "Слушаю гул северного ветра...",
   ],
   vladimir: [
-    "Молюсь и размышляю…",
-    "Вспоминаю крещение Руси…",
-    "Обдумываю ответ…",
-    "Советуюсь с митрополитом…",
-    "Вспоминаю…",
+    "Советуюсь с летописью...",
+    "Размышляю о крещении Руси...",
+    "Собираю слова для ответа...",
   ],
   yaroslav: [
-    "Листаю «Русскую Правду»…",
-    "Обдумываю мудрый ответ…",
-    "Вспоминаю летописи…",
-    "Взвешиваю слова…",
-    "Думаю…",
+    "Листаю Русскую Правду...",
+    "Собираю мудрый ответ...",
+    "Сверяюсь с летописями...",
   ],
   ivan3: [
-    "Вспоминаю объединение земель…",
-    "Обдумываю государственный ответ…",
-    "Взвешиваю каждое слово…",
-    "Думаю о Руси…",
-    "Размышляю…",
+    "Объединяю мысли, как земли...",
+    "Взвешиваю государев ответ...",
+    "Размышляю о Руси...",
   ],
   ivan4: [
-    "Размышляю об опричнине…",
-    "Вспоминаю годы правления…",
-    "Взвешиваю слова…",
-    "Обдумываю ответ…",
-    "Думаю…",
+    "Взвешиваю царское слово...",
+    "Вспоминаю годы правления...",
+    "Размышляю об ответе...",
   ],
   peter1: [
-    "Вспоминаю реформы…",
-    "Думаю по-европейски…",
-    "Обдумываю ответ…",
-    "Прокладываю курс…",
-    "Взвешиваю…",
+    "Прокладываю курс ответа...",
+    "Собираю реформы в одну мысль...",
+    "Думаю по-европейски...",
   ],
   catherine2: [
-    "Обращаюсь к философии…",
-    "Вспоминаю эпоху Просвещения…",
-    "Формулирую мысль…",
-    "Обдумываю ответ…",
-    "Размышляю…",
+    "Обращаюсь к философии...",
+    "Формулирую мысль...",
+    "Вспоминаю эпоху Просвещения...",
   ],
   nicholas2: [
-    "Вспоминаю те годы…",
-    "Обдумываю ответ…",
-    "Размышляю…",
-    "Собираюсь с мыслями…",
-    "Взвешиваю слова…",
+    "Собираюсь с мыслями...",
+    "Взвешиваю слова...",
+    "Размышляю...",
   ],
 };
 
-const DEFAULT_PHRASES = [
-  "Думаю…",
-  "Вспоминаю…",
-  "Размышляю…",
-  "Обдумываю ответ…",
-  "Собираюсь с мыслями…",
-];
+const DEFAULT_PHRASES = ["Думаю...", "Вспоминаю...", "Обдумываю ответ..."];
 
 export function TypingIndicator({ character }: TypingIndicatorProps) {
-  const phrases =
-    (character ? PHRASES[character.id] : null) ?? DEFAULT_PHRASES;
+  const theme = getThemeByEra(character?.era);
+  const phrases = (character ? PHRASES[character.id] : null) ?? DEFAULT_PHRASES;
 
-  const [index, setIndex] = useState(() =>
-    Math.floor(Math.random() * phrases.length)
-  );
+  const [index, setIndex] = useState(() => Math.floor(Math.random() * phrases.length));
   const [visible, setVisible] = useState(true);
 
-  // Меняем фразу каждые 2.8 сек с плавным fade
   useEffect(() => {
     const interval = setInterval(() => {
       setVisible(false);
       setTimeout(() => {
-        setIndex((i) => (i + 1) % phrases.length);
+        setIndex((current) => (current + 1) % phrases.length);
         setVisible(true);
-      }, 300);
-    }, 2800);
+      }, 280);
+    }, 2600);
+
     return () => clearInterval(interval);
   }, [phrases.length]);
 
   return (
-    <div className="flex gap-3 items-end">
-      {/* Avatar */}
+    <div className="flex items-end gap-4">
       <div className="shrink-0">
         <TalkingAvatar
           characterId={character?.id ?? ""}
@@ -143,18 +108,15 @@ export function TypingIndicator({ character }: TypingIndicatorProps) {
         />
       </div>
 
-      {/* Bubble */}
-      <div className="bg-soviet-dark-3 border border-soviet-gray/20 px-4 py-3 rounded-2xl rounded-tl-sm shadow-md flex items-center gap-3">
-        {/* Три точки */}
-        <div className="flex gap-1.5 items-center shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-soviet-red-light animate-bounce" style={{ animationDelay: "0ms" }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-soviet-red-light animate-bounce" style={{ animationDelay: "150ms" }} />
-          <span className="w-1.5 h-1.5 rounded-full bg-soviet-red-light animate-bounce" style={{ animationDelay: "300ms" }} />
+      <div className="flex items-center gap-3 rounded-[24px] rounded-tl-md border border-white/10 bg-[var(--theme-panel)]/88 px-5 py-4 shadow-[0_16px_30px_rgba(0,0,0,0.16)] backdrop-blur-md">
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-[var(--theme-accent)] animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="h-2 w-2 rounded-full bg-[var(--theme-accent)] animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="h-2 w-2 rounded-full bg-[var(--theme-accent)] animate-bounce" style={{ animationDelay: "300ms" }} />
         </div>
 
-        {/* Фраза с fade */}
         <span
-          className="text-soviet-gray-light text-xs font-body italic transition-opacity duration-300"
+          className={`text-xs italic text-[var(--theme-muted)] transition-opacity duration-300 ${theme.accentClass}`}
           style={{ opacity: visible ? 1 : 0 }}
         >
           {phrases[index]}

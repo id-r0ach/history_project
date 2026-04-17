@@ -1,11 +1,12 @@
-import { useEffect, useState, useCallback } from "react";
-import type { CharacterInfo, BalanceInfo } from "./types";
-import { apiClient } from "./services/api";
+import { useCallback, useEffect, useState } from "react";
+
+import type { BalanceInfo, CharacterInfo } from "./types";
 import { CharacterSidebar } from "./components/CharacterSidebar";
 import { ChatWindow } from "./components/ChatWindow";
 import { SettingsModal } from "./components/SettingsModal";
+import { apiClient } from "./services/api";
+import { getThemeByEra } from "./theme";
 
-// Fallback characters shown while fetching from backend
 const FALLBACK_CHARACTERS: CharacterInfo[] = [
   {
     id: "khrushchev",
@@ -39,9 +40,12 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const refreshBalance = useCallback(() => {
-    apiClient.getBalance()
+    apiClient
+      .getBalance()
       .then(setBalance)
-      .catch(() => { /* тихо игнорируем — не критично */ });
+      .catch(() => {
+        // Balance is non-critical for the main flow.
+      });
   }, []);
 
   useEffect(() => {
@@ -58,18 +62,19 @@ export default function App() {
       .finally(() => setIsFetching(false));
   }, []);
 
-  // Загружаем баланс при старте
   useEffect(() => {
     setIsBalanceLoading(true);
-    apiClient.getBalance()
+    apiClient
+      .getBalance()
       .then(setBalance)
       .finally(() => setIsBalanceLoading(false));
   }, []);
 
-  const selectedCharacter = characters.find((c) => c.id === selectedId) ?? null;
+  const selectedCharacter = characters.find((character) => character.id === selectedId) ?? null;
+  const activeTheme = getThemeByEra(selectedCharacter?.era);
 
   return (
-    <div className="flex h-screen w-screen bg-soviet-dark overflow-hidden font-body">
+    <div className={`theme-shell ${activeTheme.shellClass} flex h-screen w-screen overflow-hidden font-body`}>
       <CharacterSidebar
         characters={characters}
         selectedId={selectedId}
@@ -79,7 +84,8 @@ export default function App() {
         isBalanceLoading={isBalanceLoading}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
-      <main className="flex-1 min-w-0 h-full">
+
+      <main className="h-full min-w-0 flex-1 bg-[var(--theme-surface)]">
         {selectedId ? (
           <ChatWindow
             key={selectedId}
@@ -88,16 +94,19 @@ export default function App() {
             onMessageSent={refreshBalance}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-soviet-gray-light font-body text-sm">
+          <div className="flex h-full items-center justify-center text-sm text-[var(--theme-muted)]">
             Выберите персонажа для начала диалога
           </div>
         )}
       </main>
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         balance={balance}
-        onBalanceUpdate={(b) => { setBalance(b); }}
+        onBalanceUpdate={(nextBalance) => {
+          setBalance(nextBalance);
+        }}
       />
     </div>
   );
