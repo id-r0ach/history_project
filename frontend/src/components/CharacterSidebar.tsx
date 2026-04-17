@@ -37,7 +37,10 @@ export function CharacterSidebar({
             <img src="/favicon.png" alt="Логотип сайта" className="h-full w-full object-cover" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold text-[var(--theme-text)]">Диалоги с историей</h1>
+            <h1 className="font-display text-2xl font-bold leading-[1.15] text-[var(--theme-text)]">
+              <span className="block">Диалоги с</span>
+              <span className="block">историей</span>
+            </h1>
             <p className="mt-2 text-[11px] uppercase tracking-[0.35em] text-[var(--theme-muted)]">
               Исторические эпохи России
             </p>

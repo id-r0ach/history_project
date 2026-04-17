@@ -372,7 +372,7 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
       </div>
 
       <div className="relative shrink-0 border-t border-white/10 bg-[var(--theme-panel)]/82 px-6 py-4 backdrop-blur-xl">
-        <div className="flex items-end gap-3 rounded-[28px] border border-white/10 bg-[var(--theme-panel-strong)]/90 px-4 py-3 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
+        <div className="flex items-center gap-3 rounded-[28px] border border-white/10 bg-[var(--theme-panel-strong)]/90 px-4 py-3 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
           <textarea
             ref={textareaRef}
             value={input}
@@ -387,7 +387,7 @@ export function ChatWindow({ characterId, character, onMessageSent }: ChatWindow
             }
             disabled={!character || isLoading || isLoadingHistory}
             rows={1}
-            className="min-h-[24px] flex-1 resize-none bg-transparent text-sm leading-relaxed text-[var(--theme-text)] outline-none placeholder:text-[var(--theme-muted)] disabled:opacity-50"
+            className="min-h-[48px] flex-1 resize-none self-center bg-transparent py-[11px] text-sm leading-6 text-[var(--theme-text)] outline-none placeholder:text-[var(--theme-muted)] disabled:opacity-50"
           />
 
           <button
