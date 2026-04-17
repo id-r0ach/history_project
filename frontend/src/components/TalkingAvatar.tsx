@@ -31,6 +31,7 @@ const INITIALS: Record<string, string> = {
 };
 
 const AVATAR_EXTENSIONS = ["JPG", "jpg", "JPEG", "jpeg", "png", "PNG"];
+const USE_STATIC_SPEAK_FRAME = true;
 
 function publicAsset(path: string): string {
   const base = import.meta.env.BASE_URL || "/";
@@ -67,6 +68,12 @@ export function TalkingAvatar({
   }, [characterId]);
 
   useEffect(() => {
+    if (USE_STATIC_SPEAK_FRAME) {
+      setFrame(isSpeaking && idleOk && speakOk ? "speak" : "idle");
+      return;
+    }
+
+    // Legacy animation mode: alternate idle/speak frames while audio is playing.
     if (!isSpeaking || !idleOk || !speakOk) {
       setFrame("idle");
       return;
