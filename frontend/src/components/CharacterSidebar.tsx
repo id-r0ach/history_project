@@ -32,16 +32,11 @@ export function CharacterSidebar({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_35%),linear-gradient(180deg,transparent,rgba(0,0,0,0.24))]" />
 
       <div className="relative border-b border-white/10 px-6 py-6">
-        <div className="flex items-center gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--theme-accent-soft)] bg-[var(--theme-badge)] text-lg text-[var(--theme-accent)] shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
-            ✦
-          </div>
-          <div>
-            <h1 className="font-display text-xl font-bold text-[var(--theme-text)]">История России</h1>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.35em] text-[var(--theme-muted)]">
-              Диалоги с эпохами
-            </p>
-          </div>
+        <div>
+          <h1 className="font-display text-2xl font-bold text-[var(--theme-text)]">Диалоги с историей</h1>
+          <p className="mt-2 text-[11px] uppercase tracking-[0.35em] text-[var(--theme-muted)]">
+            Исторические эпохи России
+          </p>
         </div>
       </div>
 
@@ -96,7 +91,9 @@ export function CharacterSidebar({
                         <div className="min-w-0 flex-1">
                           <p
                             className={`truncate text-sm font-medium transition-colors ${
-                              isSelected ? "text-[var(--theme-text)]" : "text-[var(--theme-text-soft)] group-hover:text-[var(--theme-text)]"
+                              isSelected
+                                ? "text-[var(--theme-text)]"
+                                : "text-[var(--theme-text-soft)] group-hover:text-[var(--theme-text)]"
                             }`}
                           >
                             {character.name}
