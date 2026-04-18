@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from characters import CHARACTERS, build_system_prompt, get_character
+from characters import CHARACTERS, build_request_messages, build_system_prompt, get_character
 from config import settings
 from schemas import CharacterInfo, ChatRequest, ChatResponse, SessionInfo, HistoryMessage, HistoryResponse
 from services import RouterAIError, routerai_service, session_store, TTSError, YandexTTSService, BalanceTracker
@@ -119,14 +119,15 @@ async def chat(body: ChatRequest) -> ChatResponse:
 
     # 4. Читаем полную историю для отправки в AI
     history = session_store.get_history(body.session_id)
+    request_messages = build_request_messages(history, character.system_prompt)
     logger.info(
-        "Chat request | session=%s | character=%s | history_len=%d",
-        body.session_id, character.id, len(history),
+        "Chat request | session=%s | character=%s | history_len=%d | request_len=%d",
+        body.session_id, character.id, len(history), len(request_messages),
     )
 
     # 5. Отправляем всю историю в RouterAI
     try:
-        reply = await routerai_service.ask(history)
+        reply = await routerai_service.ask(request_messages)
     except RouterAIError as exc:
         # Откатываем сообщение пользователя — оно не было обработано
         session_store.rollback_last_user_message(body.session_id)
@@ -147,8 +148,8 @@ async def chat(body: ChatRequest) -> ChatResponse:
     session_store.append_assistant(body.session_id, reply)
 
     # 7. Списываем стоимость запроса с баланса
-    # Входные токены = весь контекст (history), выходные = ответ
-    input_text = " ".join(m.get("content", "") for m in history)
+    # Входные токены = полный фактический prompt, отправленный в модель, выходные = ответ
+    input_text = " ".join(m.get("content", "") for m in request_messages)
     balance_tracker.charge_llm(input_text=input_text, output_text=reply)
 
     logger.info(
